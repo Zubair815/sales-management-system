@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: sales-management-api
+    runtime: node
+    buildCommand: npm install && npx prisma generate
+    startCommand: npm start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: PORT
+        value: 10000
