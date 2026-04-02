@@ -1,7 +1,8 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: '/api',
+  // UPDATE: Point directly to your live Render backend
+  baseURL: 'https://sales-management-system-rrsv.onrender.com/api',
   headers: { 'Content-Type': 'application/json' },
 })
 
