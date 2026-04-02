@@ -1,0 +1,201 @@
+import { useEffect, useState } from 'react'
+import api from '../services/api'
+import toast from 'react-hot-toast'
+import { useForm } from 'react-hook-form'
+import { Modal, Pagination, StatusBadge, PageHeader, EmptyState, FormField, SearchInput } from '../components/index.jsx'
+import { Plus, Eye, Check, X, CreditCard, Printer } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
+import PaymentPrintTemplate from '../components/PaymentPrintTemplate.jsx'
+
+export default function PaymentsPage() {
+  const { user, hasPermission } = useAuth()
+  const isSp = user.role === 'Salesperson'
+  const canVerify = hasPermission('PaymentManagement', 'FullAccess') || user.role === 'SuperAdmin'
+  const [data, setData] = useState([])
+  const [pagination, setPagination] = useState({ page: 1, totalPages: 1 })
+  const [statusFilter, setStatusFilter] = useState('')
+  const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [viewItem, setViewItem] = useState(null)
+  const [rejectTarget, setRejectTarget] = useState(null)
+  const [printItem, setPrintItem] = useState(null)
+  const [parties, setParties] = useState([])
+  const [orders, setOrders] = useState([])
+  const { register, handleSubmit, reset } = useForm()
+  const { register: reg2, handleSubmit: hs2, reset: rst2 } = useForm()
+
+const fetch = async (page = 1) => {
+    setLoading(true)
+    try {
+      // Add 'search' to the params here:
+      const r = await api.get('/payments', { params: { page, limit: 10, status: statusFilter, search } })
+      setData(r.data.data); setPagination(r.data.pagination)
+    } catch { toast.error('Failed') } finally { setLoading(false) }
+  }
+
+  // Add 'search' to the dependency array here:
+  useEffect(() => { fetch() }, [statusFilter, search])
+
+  useEffect(() => { fetch() }, [statusFilter])
+  useEffect(() => {
+    if (isSp) {
+      api.get('/parties', { params: { limit: 100 } }).then(r => setParties(r.data.data)).catch(() => {})
+      api.get('/orders', { params: { limit: 100 } }).then(r => setOrders(r.data.data)).catch(() => {})
+    }
+  }, [isSp])
+
+  const onSubmit = async (d) => {
+    try {
+      const formData = new FormData()
+      Object.entries(d).forEach(([k, v]) => { if (v !== '' && v !== undefined) formData.append(k, v) })
+      if (d.proof?.[0]) formData.set('proof', d.proof[0])
+      await api.post('/payments', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+      toast.success('Payment recorded'); setModalOpen(false); reset(); fetch()
+    } catch (e) { toast.error(e.response?.data?.message || 'Error') }
+  }
+
+  const verify = async (id) => {
+    try { await api.patch(`/payments/${id}/verify`); toast.success('Payment verified'); fetch() }
+    catch { toast.error('Failed') }
+  }
+
+  const reject = async (d) => {
+    try {
+      await api.patch(`/payments/${rejectTarget.id}/reject`, { rejectionReason: d.rejectionReason })
+      toast.success('Payment rejected'); setRejectTarget(null); rst2(); fetch()
+    } catch { toast.error('Failed') }
+  }
+
+  const openPrint = async (payment) => {
+    try {
+      const template = await api.get('/print/templates/payment')
+      setPrintItem({ payment, template: template.data.data })
+    } catch { toast.error('Failed') }
+  }
+
+  const MODES = ['Cash', 'Cheque', 'NEFT', 'UPI', 'Other']
+
+  return (
+    <div>
+      <PageHeader title={isSp ? 'My Payments' : 'Payments'} subtitle={`${pagination?.total ?? 0} records`}
+        actions={isSp && <button onClick={() => { reset({}); setModalOpen(true) }} className="btn-primary"><Plus size={16} />Record Payment</button>} />
+
+      <div className="card">
+        <div className="mb-4">
+        <SearchInput value={search} onChange={setSearch} placeholder="Search receipt, purpose..." />
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="input w-40">
+            <option value="">All Status</option>
+            <option value="Pending">Pending</option>
+            <option value="Verified">Verified</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
+
+        {loading ? <div className="flex justify-center py-12"><div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" /></div>
+        : data.length === 0 ? <EmptyState icon={CreditCard} title="No payments found" />
+        : (
+          <div className="table-container">
+            <table className="table">
+              <thead><tr><th>Receipt #</th><th>Date</th>{!isSp && <th>Salesperson</th>}<th>Party</th><th>Amount</th><th>Mode</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody>
+                {data.map(p => (
+                  <tr key={p.id}>
+                    <td className="font-mono text-xs text-blue-700">{p.receiptNumber}</td>
+                    <td className="text-xs text-gray-500">{new Date(p.paymentDate).toLocaleDateString()}</td>
+                    {!isSp && <td className="text-sm font-medium">{p.salesperson?.name}</td>}
+                    <td className="text-sm">{p.party?.name}</td>
+                    <td className="font-semibold text-green-700">₹{Number(p.amount).toLocaleString()}</td>
+                    <td><span className="badge badge-blue">{p.paymentMode}</span></td>
+                    <td><StatusBadge status={p.status} /></td>
+                    <td>
+                      <div className="flex gap-1">
+                        <button onClick={() => setViewItem(p)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400"><Eye size={14} /></button>
+                        <button onClick={() => openPrint(p)} className="p-1.5 hover:bg-gray-50 hover:text-gray-700 rounded text-gray-400"><Printer size={14} /></button>
+                        {canVerify && p.status === 'Pending' && (
+                          <>
+                            <button onClick={() => verify(p.id)} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400"><Check size={14} /></button>
+                            <button onClick={() => { setRejectTarget(p); rst2() }} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400"><X size={14} /></button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <Pagination page={pagination.page} totalPages={pagination.totalPages} onPageChange={fetch} />
+      </div>
+
+      {/* Record Payment Modal */}
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Record Payment">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <FormField label="Party" required>
+            <select {...register('partyId', { required: true })} className="input">
+              <option value="">Select Party</option>
+              {parties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </FormField>
+          <FormField label="Linked Order (optional)">
+            <select {...register('orderId')} className="input">
+              <option value="">None</option>
+              {orders.map(o => <option key={o.id} value={o.id}>{o.orderNumber} - ₹{Number(o.grandTotal).toLocaleString()}</option>)}
+            </select>
+          </FormField>
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="Amount (₹)" required>
+              <input {...register('amount', { required: true })} type="number" step="0.01" className="input" />
+            </FormField>
+            <FormField label="Payment Date" required>
+              <input {...register('paymentDate', { required: true })} type="date" className="input" />
+            </FormField>
+            <FormField label="Payment Mode" required>
+              <select {...register('paymentMode', { required: true })} className="input">
+                <option value="">Select</option>
+                {MODES.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </FormField>
+            <FormField label="Transaction ID">
+              <input {...register('transactionId')} className="input" placeholder="UPI/NEFT ref no." />
+            </FormField>
+          </div>
+          <FormField label="Purpose">
+            <input {...register('purpose')} className="input" placeholder="Payment for order..." />
+          </FormField>
+          <FormField label="Proof (optional)">
+            <input {...register('proof')} type="file" accept="image/*,.pdf" className="input py-1.5 text-xs" />
+          </FormField>
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">Cancel</button>
+            <button type="submit" className="btn-primary">Record Payment</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Reject Modal */}
+      <Modal open={!!rejectTarget} onClose={() => setRejectTarget(null)} title="Reject Payment">
+        <form onSubmit={hs2(reject)} className="space-y-4">
+          <p className="text-sm text-gray-600">{rejectTarget?.party?.name} - ₹{Number(rejectTarget?.amount || 0).toLocaleString()}</p>
+          <FormField label="Rejection Reason" required>
+            <textarea {...reg2('rejectionReason', { required: true })} className="input" rows={3} />
+          </FormField>
+          <div className="flex justify-end gap-3">
+            <button type="button" onClick={() => setRejectTarget(null)} className="btn-secondary">Cancel</button>
+            <button type="submit" className="btn-danger">Reject</button>
+          </div>
+        </form>
+      </Modal>
+
+      {printItem && (
+        <Modal open={!!printItem} onClose={() => setPrintItem(null)} title="Payment Receipt" size="lg">
+          <div className="flex justify-end mb-4 no-print">
+            <button onClick={() => window.print()} className="btn-primary"><Printer size={16} />Print</button>
+          </div>
+          <PaymentPrintTemplate data={printItem} />
+        </Modal>
+      )}
+    </div>
+  )
+}

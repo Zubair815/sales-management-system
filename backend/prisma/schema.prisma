@@ -1,0 +1,390 @@
+// This is your Prisma schema file
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== USERS ====================
+
+model SuperAdmin {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  password     String
+  status       String   @default("Active") // Active, Inactive
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+
+  auditLogs    AuditLog[]
+
+  @@map("super_admins")
+}
+
+model Admin {
+  id              String   @id @default(uuid())
+  name            String
+  email           String   @unique
+  phone           String?
+  password        String
+  status          String   @default("Active") // Active, Inactive
+  failedAttempts  Int      @default(0)
+  lockedUntil     DateTime?
+  lastLoginAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+
+  modulePermissions  ModulePermission[]
+  announcements      Announcement[]
+  approvedExpenses   Expense[]    @relation("ExpenseApprover")
+  verifiedPayments   Payment[]    @relation("PaymentVerifier")
+  auditLogs          AuditLog[]
+
+  @@map("admins")
+}
+
+model Salesperson {
+  id              String   @id @default(uuid())
+  employeeId      String   @unique
+  name            String
+  email           String?  @unique
+  phone           String
+  password        String
+  region          String?
+  jobRole         String?
+  status          String   @default("Active") // Active, Inactive
+  targetAmount    Decimal? @db.Decimal(15,2)
+  budgetAmount    Decimal? @db.Decimal(15,2)
+  failedAttempts  Int      @default(0)
+  lockedUntil     DateTime?
+  lastLoginAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+
+  orders               Order[]
+  expenses             Expense[]
+  payments             Payment[]
+  announcementReads    AnnouncementRead[]
+  announcementRecipients AnnouncementRecipient[]
+  auditLogs            AuditLog[]
+
+  @@map("salespersons")
+}
+
+// ==================== PERMISSIONS ====================
+
+model ModulePermission {
+  id             String   @id @default(uuid())
+  adminId        String
+  moduleName     String
+  permissionLevel String  // NoAccess, ViewOnly, ViewEdit, FullAccess
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  admin          Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@unique([adminId, moduleName])
+  @@index([adminId])
+  @@map("module_permissions")
+}
+
+// ==================== PARTIES ====================
+
+model Party {
+  id          String   @id @default(uuid())
+  name        String
+  contactName String?
+  phone       String
+  email       String?
+  address     String?
+  city        String?
+  state       String?
+  gstNumber   String?
+  status      String   @default("Active") // Active, Inactive
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  orders      Order[]
+  payments    Payment[]
+
+  @@index([status])
+  @@map("parties")
+}
+
+// ==================== INVENTORY ====================
+
+model InventoryItem {
+  id              String   @id @default(uuid())
+  sku             String   @unique
+  name            String
+  description     String?
+  category        String?
+  unit            String   @default("Piece")
+  costPrice       Decimal? @db.Decimal(15,2)
+  sellingPrice    Decimal  @db.Decimal(15,2)
+  stockQuantity   Int      @default(0)
+  lowStockThreshold Int    @default(10)
+  status          String   @default("Active") // Active, Inactive
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+
+  orderItems      OrderItem[]
+
+  @@index([status])
+  @@index([category])
+  @@map("inventory_items")
+}
+
+// ==================== ORDERS ====================
+
+model Order {
+  id              String   @id @default(uuid())
+  orderNumber     String   @unique
+  salespersonId   String
+  partyId         String
+  status          String   @default("Pending") // Pending, Approved, Dispatched, Delivered, Cancelled
+  totalAmount     Decimal  @db.Decimal(15,2)
+  taxAmount       Decimal? @db.Decimal(15,2) @default(0)
+  grandTotal      Decimal  @db.Decimal(15,2)
+  notes           String?
+  printedCount    Int      @default(0)
+  lastPrintedAt   DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+
+  salesperson     Salesperson  @relation(fields: [salespersonId], references: [id])
+  party           Party        @relation(fields: [partyId], references: [id])
+  orderItems      OrderItem[]
+  payments        Payment[]
+
+  @@index([salespersonId])
+  @@index([partyId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id          String   @id @default(uuid())
+  orderId     String
+  itemId      String
+  quantity    Int
+  unitPrice   Decimal  @db.Decimal(15,2)
+  totalPrice  Decimal  @db.Decimal(15,2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  item        InventoryItem @relation(fields: [itemId], references: [id])
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+// ==================== EXPENSES ====================
+
+model ExpenseType {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  status      String   @default("Active")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  expenses    Expense[]
+
+  @@map("expense_types")
+}
+
+model Expense {
+  id               String       @id @default(uuid())
+  salespersonId    String
+  expenseTypeId    String
+  description      String
+  amount           Decimal      @db.Decimal(15, 2)
+  expenseDate      DateTime
+  proofFilePath    String?
+  
+  // Updated statuses: 
+  // "Draft" (Saved by SP, hidden from Admin)
+  // "Pending" (Submitted by SP, awaiting Admin review)
+  // "Approved" (Company paid the expense)
+  // "Rejected" (Admin denied the claim)
+  status           String       @default("Draft") 
+  
+  // Tracks when the salesperson finally clicks "Submit Monthly Report"
+  submittedAt      DateTime?    
+  
+  approvedById     String?
+  approvedAt       DateTime?
+  rejectionReason  String?
+  budgetCode       String?
+  remarks          String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  deletedAt        DateTime?
+
+  salesperson      Salesperson  @relation(fields: [salespersonId], references: [id])
+  expenseType      ExpenseType  @relation(fields: [expenseTypeId], references: [id])
+  approvedBy       Admin?       @relation("ExpenseApprover", fields: [approvedById], references: [id])
+
+  @@index([salespersonId])
+  @@index([status])
+  @@index([expenseDate])
+  @@index([submittedAt]) // Added index for faster monthly reporting queries
+  @@map("expenses")
+}
+// ==================== PAYMENTS ====================
+
+model Payment {
+  id              String   @id @default(uuid())
+  receiptNumber   String   @unique
+  salespersonId   String
+  partyId         String
+  orderId         String?
+  amount          Decimal  @db.Decimal(15,2)
+  paymentMode     String   // Cash, Cheque, NEFT, UPI, Other
+  transactionId   String?
+  paymentDate     DateTime
+  purpose         String?
+  status          String   @default("Pending") // Pending, Verified, Rejected
+  verifiedById    String?
+  verifiedAt      DateTime?
+  rejectionReason String?
+  proofFilePath   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+
+  salesperson     Salesperson @relation(fields: [salespersonId], references: [id])
+  party           Party       @relation(fields: [partyId], references: [id])
+  order           Order?      @relation(fields: [orderId], references: [id])
+  verifiedBy      Admin?      @relation("PaymentVerifier", fields: [verifiedById], references: [id])
+
+  @@index([salespersonId])
+  @@index([partyId])
+  @@index([status])
+  @@index([paymentDate])
+  @@map("payments")
+}
+
+// ==================== ANNOUNCEMENTS ====================
+
+model Announcement {
+  id              String   @id @default(uuid())
+  createdById     String
+  title           String
+  message         String   @db.Text
+  priority        String   @default("Medium") // High, Medium, Low
+  attachmentPath  String?
+  expiryDate      DateTime?
+  status          String   @default("Draft") // Draft, Sent, Deleted
+  sentAt          DateTime?
+  targetType      String   @default("All") // All, Specific, Region, Role
+  targetRegions   Json?
+  targetRoles     Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+
+  createdBy       Admin    @relation(fields: [createdById], references: [id])
+  recipients      AnnouncementRecipient[]
+  reads           AnnouncementRead[]
+
+  @@index([status])
+  @@index([priority])
+  @@map("announcements")
+}
+
+model AnnouncementRecipient {
+  id               String   @id @default(uuid())
+  announcementId   String
+  salespersonId    String
+  createdAt        DateTime @default(now())
+
+  announcement     Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  salesperson      Salesperson  @relation(fields: [salespersonId], references: [id])
+
+  @@unique([announcementId, salespersonId])
+  @@map("announcement_recipients")
+}
+
+model AnnouncementRead {
+  id               String   @id @default(uuid())
+  announcementId   String
+  salespersonId    String
+  readAt           DateTime @default(now())
+
+  announcement     Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  salesperson      Salesperson  @relation(fields: [salespersonId], references: [id])
+
+  @@unique([announcementId, salespersonId])
+  @@map("announcement_reads")
+}
+
+// ==================== SYSTEM ====================
+
+model SystemConfig {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("system_configs")
+}
+
+model PrintTemplate {
+  id          String   @id @default(uuid())
+  name        String   @unique // order, expense, payment
+  companyName String?
+  companyAddress String?
+  companyPhone String?
+  companyEmail String?
+  logoPath    String?
+  footerText  String?
+  customCss   String?  @db.Text
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("print_templates")
+}
+
+model AuditLog {
+  id            String   @id @default(uuid())
+  userId        String?
+  userType      String?  // SuperAdmin, Admin, Salesperson
+  superAdminId  String?
+  adminId       String?
+  salespersonId String?
+  action        String
+  module        String
+  recordId      String?
+  oldValues     Json?
+  newValues     Json?
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+
+  superAdmin    SuperAdmin? @relation(fields: [superAdminId], references: [id])
+  admin         Admin?      @relation(fields: [adminId], references: [id])
+  salesperson   Salesperson? @relation(fields: [salespersonId], references: [id])
+
+  @@index([userId])
+  @@index([module])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

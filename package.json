@@ -1,0 +1,16 @@
+{
+  "name": "sales-management-system",
+  "version": "1.0.0",
+  "description": "Sales Management System with RBAC",
+  "scripts": {
+    "install:all": "cd backend && npm install && cd ../frontend && npm install",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "migrate": "cd backend && npx prisma migrate dev",
+    "migrate:prod": "cd backend && npx prisma migrate deploy",
+    "generate": "cd backend && npx prisma generate",
+    "seed": "cd backend && node scripts/seed.js",
+    "setup": "npm run install:all && npm run generate && npm run migrate && npm run seed",
+    "build:frontend": "cd frontend && npm run build"
+  }
+}

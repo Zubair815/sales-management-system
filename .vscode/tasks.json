@@ -1,0 +1,40 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "sqlproj: Build sales_management_db",
+			"type": "process",
+			"command": "dotnet",
+			"args": [
+				"build",
+				"d:/sales-management-system/sales_management_db/sales_management_db.sqlproj"
+			],
+			"problemMatcher": "$sqlproj-problem-matcher",
+			"isBackground": true,
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"detail": "Builds the sales_management_db SQL project"
+		},
+		{
+			"label": "sqlproj: Build dd",
+			"type": "process",
+			"command": "dotnet",
+			"args": [
+				"build",
+				"d:/sales-management-system/dd/dd.sqlproj",
+				"/p:NetCoreBuild=true",
+				"/p:NETCoreTargetsPath=c:/Users/dell/.vscode/extensions/ms-mssql.sql-database-projects-vscode-1.5.7/BuildDirectory",
+				"/p:SystemDacpacsLocation=c:/Users/dell/.vscode/extensions/ms-mssql.sql-database-projects-vscode-1.5.7/BuildDirectory"
+			],
+			"problemMatcher": "$sqlproj-problem-matcher",
+			"isBackground": true,
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"detail": "Builds the dd SQL project"
+		}
+	]
+}

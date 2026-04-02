@@ -1,0 +1,150 @@
+import { useEffect, useState } from 'react'
+import api from '../services/api'
+import toast from 'react-hot-toast'
+import { useForm } from 'react-hook-form'
+import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader, FormField, EmptyState } from '../components/index.jsx'
+import { Plus, Edit, Trash2, Package, AlertTriangle, PlusCircle, MinusCircle } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
+
+export default function InventoryPage() {
+  const { hasPermission, user } = useAuth()
+  const canEdit = hasPermission('InventoryManagement', 'ViewEdit')
+  const canCreate = hasPermission('InventoryManagement', 'FullAccess')
+  const [data, setData] = useState([])
+  const [pagination, setPagination] = useState({ page: 1, totalPages: 1 })
+  const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editItem, setEditItem] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [stockTarget, setStockTarget] = useState(null)
+  const { register, handleSubmit, reset, formState: { errors } } = useForm()
+  const { register: reg2, handleSubmit: hs2, reset: rst2 } = useForm()
+
+  const fetch = async (page = 1) => {
+    setLoading(true)
+    try {
+      const r = await api.get('/inventory', { params: { page, limit: 12, search } })
+      setData(r.data.data); setPagination(r.data.pagination)
+    } catch { toast.error('Failed') } finally { setLoading(false) }
+  }
+
+  useEffect(() => { fetch() }, [search])
+
+  const openCreate = () => { setEditItem(null); reset({}); setModalOpen(true) }
+  const openEdit = (item) => { setEditItem(item); reset({ ...item, costPrice: item.costPrice || '', sellingPrice: item.sellingPrice }); setModalOpen(true) }
+
+  const onSubmit = async (d) => {
+    try {
+      if (editItem) await api.put(`/inventory/${editItem.id}`, d)
+      else await api.post('/inventory', d)
+      toast.success(editItem ? 'Updated' : 'Created'); setModalOpen(false); fetch()
+    } catch (e) { toast.error(e.response?.data?.message || 'Error') }
+  }
+
+  const deleteItem = async () => {
+    try { await api.delete(`/inventory/${deleteTarget.id}`); toast.success('Deleted'); setDeleteTarget(null); fetch() } catch { toast.error('Failed') }
+  }
+
+  const adjustStock = async (d) => {
+    try {
+      await api.patch(`/inventory/${stockTarget.id}/stock`, { adjustment: parseInt(d.adjustment), reason: d.reason })
+      toast.success('Stock adjusted'); setStockTarget(null); rst2(); fetch()
+    } catch (e) { toast.error(e.response?.data?.message || 'Error') }
+  }
+
+  return (
+    <div>
+      <PageHeader title="Inventory" subtitle={`${pagination?.total ?? 0} items`}
+        actions={canCreate && <button onClick={openCreate} className="btn-primary"><Plus size={16} />Add Item</button>} />
+
+      <div className="card">
+        <div className="mb-4"><SearchInput value={search} onChange={setSearch} placeholder="Search by name, SKU..." /></div>
+        {loading ? <div className="flex justify-center py-12"><div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" /></div>
+        : data.length === 0 ? <EmptyState icon={Package} title="No items found" />
+        : (
+          <div className="table-container">
+            <table className="table">
+              <thead><tr><th>SKU</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th>{canEdit && <th>Actions</th>}</tr></thead>
+              <tbody>
+                {data.map(item => (
+                  <tr key={item.id}>
+                    <td className="font-mono text-xs text-blue-700 font-semibold">{item.sku}</td>
+                    <td className="font-medium">{item.name}</td>
+                    <td className="text-gray-500 text-xs">{item.category || '-'}</td>
+                    <td className="font-semibold text-green-700">₹{Number(item.sellingPrice).toLocaleString()}</td>
+                    <td>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`font-semibold ${item.stockQuantity <= item.lowStockThreshold ? 'text-red-600' : 'text-gray-800'}`}>{item.stockQuantity}</span>
+                        {item.stockQuantity <= item.lowStockThreshold && <AlertTriangle size={14} className="text-red-500" />}
+                      </div>
+                    </td>
+                    <td><StatusBadge status={item.status} /></td>
+                    {canEdit && (
+                      <td>
+                        <div className="flex gap-1">
+                          <button onClick={() => openEdit(item)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400"><Edit size={14} /></button>
+                          <button onClick={() => { setStockTarget(item); rst2() }} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400" title="Adjust Stock">
+                            <PlusCircle size={14} />
+                          </button>
+                          {canCreate && <button onClick={() => setDeleteTarget(item)} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400"><Trash2 size={14} /></button>}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <Pagination page={pagination.page} totalPages={pagination.totalPages} onPageChange={fetch} />
+      </div>
+
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editItem ? 'Edit Item' : 'Add Inventory Item'} size="lg">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            {!editItem && (
+              <FormField label="SKU" required error={errors.sku?.message}>
+                <input {...register('sku', { required: 'SKU required' })} className="input" placeholder="PROD-001" />
+              </FormField>
+            )}
+            <FormField label="Name" required error={errors.name?.message}>
+              <input {...register('name', { required: 'Name required' })} className="input" />
+            </FormField>
+            <FormField label="Category"><input {...register('category')} className="input" placeholder="Electronics, Mechanical..." /></FormField>
+            <FormField label="Unit"><input {...register('unit')} className="input" placeholder="Piece, Box, Kg..." defaultValue="Piece" /></FormField>
+            <FormField label="Selling Price" required error={errors.sellingPrice?.message}>
+              <input {...register('sellingPrice', { required: 'Price required' })} type="number" step="0.01" className="input" />
+            </FormField>
+            <FormField label="Cost Price"><input {...register('costPrice')} type="number" step="0.01" className="input" /></FormField>
+            {!editItem && (
+              <FormField label="Initial Stock"><input {...register('stockQuantity')} type="number" className="input" defaultValue="0" /></FormField>
+            )}
+            <FormField label="Low Stock Alert At"><input {...register('lowStockThreshold')} type="number" className="input" defaultValue="10" /></FormField>
+          </div>
+          <FormField label="Description"><textarea {...register('description')} className="input" rows={2} /></FormField>
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">Cancel</button>
+            <button type="submit" className="btn-primary">{editItem ? 'Update' : 'Create'}</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={!!stockTarget} onClose={() => setStockTarget(null)} title={`Adjust Stock: ${stockTarget?.name}`}>
+        <form onSubmit={hs2(adjustStock)} className="space-y-4">
+          <p className="text-sm text-gray-500">Current stock: <span className="font-semibold text-gray-800">{stockTarget?.stockQuantity}</span></p>
+          <FormField label="Adjustment (use negative to reduce)">
+            <input {...reg2('adjustment', { required: true })} type="number" className="input" placeholder="+50 or -10" />
+          </FormField>
+          <FormField label="Reason"><input {...reg2('reason')} className="input" placeholder="Stock received, damaged..." /></FormField>
+          <div className="flex justify-end gap-3">
+            <button type="button" onClick={() => setStockTarget(null)} className="btn-secondary">Cancel</button>
+            <button type="submit" className="btn-primary">Apply Adjustment</button>
+          </div>
+        </form>
+      </Modal>
+
+      <ConfirmDialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={deleteItem} title="Delete Item" message={`Delete ${deleteTarget?.name}?`} danger />
+    </div>
+  )
+}
