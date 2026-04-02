@@ -14,7 +14,12 @@ export const SocketProvider = ({ children }) => {
     const token = localStorage.getItem('token')
     if (!user || !token) return
 
-    const s = io('/', { auth: { token }, transports: ['websocket', 'polling'] })
+    // --- UPDATED: Pointing directly to your live Render backend ---
+    const s = io('https://sales-management-system-rrsv.onrender.com', { 
+      auth: { token }, 
+      transports: ['websocket', 'polling'],
+      withCredentials: true
+    })
 
     s.on('connect', () => setConnected(true))
     s.on('disconnect', () => setConnected(false))
