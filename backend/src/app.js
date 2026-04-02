@@ -49,13 +49,32 @@ app.use(helmet({
   },
 }));
 
-// CORS
+// --- UPDATED CORS CONFIGURATION ---
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://sales-management-system-ten.vercel.app' // Your live Vercel URL
+];
+
+// If you ever add a custom domain later, it will pick it up from Render env vars
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: function (origin, callback) {
+    // allow requests with no origin (like mobile apps, curl, or Postman)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      var msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+// ----------------------------------
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
