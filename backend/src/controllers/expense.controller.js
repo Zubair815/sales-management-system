@@ -201,7 +201,7 @@ const createExpense = async (req, res) => {
     const salespersonId = req.user.role === 'Salesperson' ? req.user.id : req.body.salespersonId;
     if (!salespersonId) return errorResponse(res, 'Salesperson required', 400);
 
-    const proofFilePath = req.file ? `/uploads/expenses/${req.file.filename}` : null;
+    const proofFilePath = req.file ? req.file.path : null;
 
     const expense = await prisma.expense.create({
       data: { 

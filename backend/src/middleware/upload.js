@@ -1,71 +1,60 @@
 const multer = require('multer');
-const path = require('path');
-const { v4: uuidv4 } = require('uuid');
-const fs = require('fs');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
-const ensureDir = (dir) => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-};
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../../uploads', req.uploadSubDir || 'general');
-    ensureDir(uploadDir);
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const filename = `${uuidv4()}${ext}`;
-    cb(null, filename);
-  },
+// 1. Configure Cloudinary securely using Environment Variables
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-const fileFilter = (req, file, cb) => {
-  const allowedTypes = [
-    'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
-    'application/pdf',
-    'image/webp',
-  ];
+// ==========================================
+// STORAGE 1: General Uploads (Expenses, etc.)
+// ==========================================
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: async (req, file) => {
+    // Replicates your uploadSubDir logic
+    let folderName = 'sms/general';
+    if (req.uploadSubDir) {
+      folderName = `sms/${req.uploadSubDir}`;
+    }
 
-  if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('Invalid file type. Allowed: JPEG, PNG, GIF, PDF, WebP'), false);
-  }
-};
+    return {
+      folder: folderName,
+      // 'auto' allows Cloudinary to accept both images AND PDFs
+      resource_type: 'auto', 
+      allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf']
+    };
+  },
+});
 
 const upload = multer({
-  storage,
+  storage: storage,
   limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024,
-  },
-  fileFilter,
+    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024, // 5MB limit
+  }
 });
 
-const logoStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../../uploads/logos');
-    ensureDir(uploadDir);
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `company-logo${ext}`);
+// ==========================================
+// STORAGE 2: Specific Logo Uploads
+// ==========================================
+const logoStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'sms/logos',
+    // Keeps the specific filename logic you had before
+    public_id: 'company-logo', 
+    allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp']
   },
 });
 
 const logoUpload = multer({
   storage: logoStorage,
-  limits: { fileSize: 2 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    if (['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Logo must be an image file'), false);
-    }
-  },
+  limits: { 
+    fileSize: 2 * 1024 * 1024 // 2MB limit for logos
+  }
 });
 
-module.exports = { upload, logoUpload };
+module.exports = { upload, logoUpload, cloudinary };
