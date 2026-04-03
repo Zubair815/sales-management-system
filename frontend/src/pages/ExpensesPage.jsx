@@ -232,24 +232,26 @@ export default function ExpensesPage() {
           /* ========================================= */
           adminReports.length === 0 ? <EmptyState icon={Receipt} title="No expense reports found" /> :
           <div className="table-container">
-            <table className="table">
+            <table className="table responsive-table expense-reports-table">
               <thead><tr><th>Salesperson</th><th>Total Expenses</th><th>Pending Amount</th><th>Total Amount</th><th>Status</th><th>Action</th></tr></thead>
               <tbody>
                 {adminReports.map(rep => (
                   <tr key={rep.salespersonId}>
-                    <td>
-                      <div className="font-medium text-sm">{rep.name}</div>
-                      <div className="text-xs text-gray-500">{rep.employeeId} | {rep.region}</div>
+                    <td data-label="Salesperson">
+                      <div className="text-right md:text-left">
+                        <div className="font-medium text-sm">{rep.name}</div>
+                        <div className="text-xs text-gray-500">{rep.employeeId} | {rep.region}</div>
+                      </div>
                     </td>
-                    <td><span className="font-medium">{rep.totalExpenses}</span> <span className="text-xs text-gray-500">({rep.pendingCount} pending)</span></td>
+                    <td data-label="Total Expenses"><span className="font-medium">{rep.totalExpenses}</span> <span className="text-xs text-gray-500">({rep.pendingCount} pending)</span></td>
                     <td className="font-semibold text-orange-600">₹{rep.pendingAmount.toLocaleString()}</td>
                     <td className="font-semibold text-green-700">₹{rep.totalAmount.toLocaleString()}</td>
-                    <td>
+                    <td data-label="Status">
                       <span className={`px-2 py-1 rounded text-xs font-medium ${rep.pendingCount > 0 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
                         {rep.status}
                       </span>
                     </td>
-                    <td>
+                    <td data-label="Action" data-cell="actions">
                       <button onClick={() => setSelectedSp({ id: rep.salespersonId, name: rep.name })} className="btn-secondary btn-sm">
                         View Details
                       </button>
@@ -265,19 +267,19 @@ export default function ExpensesPage() {
           /* ========================================= */
           data.length === 0 ? <EmptyState icon={Receipt} title="No expenses found" /> :
           <div className="table-container">
-            <table className="table">
+            <table className="table responsive-table expense-details-table">
               <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Amount</th><th>Status</th><th>Proof</th><th>Actions</th></tr></thead>
               <tbody>
                 {data.map(e => (
                   <tr key={e.id}>
-                    <td className="text-xs text-gray-500">{new Date(e.expenseDate).toLocaleDateString()}</td>
-                    <td className="text-sm">{e.expenseType?.name}</td>
-                    <td className="text-sm max-w-xs truncate">{e.description}</td>
+                    <td data-label="Date" className="text-xs text-gray-500">{new Date(e.expenseDate).toLocaleDateString()}</td>
+                    <td data-label="Type" className="text-sm">{e.expenseType?.name}</td>
+                    <td data-label="Description" className="text-sm whitespace-normal md:max-w-xs md:truncate">{e.description}</td>
                     <td className="font-semibold text-green-700">₹{Number(e.amount).toLocaleString()}</td>
-                    <td><StatusBadge status={e.status} /></td>
-                    <td>{e.proofFilePath ? <a href={e.proofFilePath} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline text-xs flex items-center gap-1"><Paperclip size={12} />View</a> : <span className="text-gray-300 text-xs">None</span>}</td>
-                    <td>
-                      <div className="flex gap-1">
+                    <td data-label="Status"><StatusBadge status={e.status} /></td>
+                    <td data-label="Proof">{e.proofFilePath ? <a href={e.proofFilePath} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-blue-600 hover:underline text-xs"><Paperclip size={12} />View</a> : <span className="text-gray-300 text-xs">None</span>}</td>
+                    <td data-label="Actions" data-cell="actions">
+                      <div className="flex flex-wrap justify-end gap-1 md:justify-start">
                         <button onClick={() => setViewItem(e)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400"><Eye size={14} /></button>
                         {canApprove && !isSp && e.status === 'Pending' && (
                           <>

@@ -1,4 +1,5 @@
 import { X, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react'
+import Skeleton from './Skeleton.jsx'
 
 // Modal
 export function Modal({ open, onClose, title, children, size = '' }) {
@@ -178,3 +179,5 @@ export function PageHeader({ title, subtitle, actions }) {
     </div>
   )
 }
+
+export { Skeleton }

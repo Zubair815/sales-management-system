@@ -107,19 +107,19 @@ export default function OrdersPage() {
         : data.length === 0 ? <EmptyState icon={ShoppingCart} title="No orders found" action={isSp && <button onClick={openCreate} className="btn-primary"><Plus size={16} />Create Order</button>} />
         : (
           <div className="table-container">
-            <table className="table">
+            <table className={`table responsive-table ${isSp ? 'orders-table-sp' : 'orders-table'}`}>
               <thead><tr><th>Order #</th><th>Party</th>{!isSp && <th>Salesperson</th>}<th>Amount</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
               <tbody>
                 {data.map(o => (
                   <tr key={o.id}>
-                    <td className="font-mono text-xs text-blue-700 font-semibold">{o.orderNumber}</td>
-                    <td className="font-medium">{o.party?.name}</td>
-                    {!isSp && <td className="text-gray-500 text-sm">{o.salesperson?.name}</td>}
+                    <td data-label="Order #" className="font-mono text-xs text-blue-700 font-semibold">{o.orderNumber}</td>
+                    <td data-label="Party" className="font-medium">{o.party?.name}</td>
+                    {!isSp && <td data-label="Salesperson" className="text-gray-500 text-sm">{o.salesperson?.name}</td>}
                     <td className="font-semibold text-green-700">₹{Number(o.grandTotal).toLocaleString()}</td>
-                    <td><StatusBadge status={o.status} /></td>
-                    <td className="text-gray-500 text-xs">{new Date(o.createdAt).toLocaleDateString()}</td>
-                    <td>
-                      <div className="flex items-center gap-1">
+                    <td data-label="Status"><StatusBadge status={o.status} /></td>
+                    <td data-label="Date" className="text-gray-500 text-xs">{new Date(o.createdAt).toLocaleDateString()}</td>
+                    <td data-label="Actions" data-cell="actions">
+                      <div className="flex flex-wrap items-center justify-end gap-1 md:justify-start">
                         <button onClick={() => setViewOrder(o)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400" title="View"><Eye size={14} /></button>
                         <button onClick={() => openPrint(o.id)} className="p-1.5 hover:bg-gray-50 hover:text-gray-700 rounded text-gray-400" title="Print"><Printer size={14} /></button>
                         
@@ -210,14 +210,14 @@ export default function OrdersPage() {
               <div><span className="text-gray-500">Date:</span> <span>{new Date(viewOrder.createdAt).toLocaleDateString()}</span></div>
             </div>
             <div className="table-container">
-              <table className="table">
+              <table className="table responsive-table order-items-table">
                 <thead><tr><th>Item</th><th>SKU</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
                 <tbody>
                   {viewOrder.orderItems?.map(oi => (
                     <tr key={oi.id}>
-                      <td>{oi.item?.name}</td>
-                      <td className="font-mono text-xs">{oi.item?.sku}</td>
-                      <td>{oi.quantity}</td>
+                      <td data-label="Item">{oi.item?.name}</td>
+                      <td data-label="SKU" className="font-mono text-xs">{oi.item?.sku}</td>
+                      <td data-label="Qty">{oi.quantity}</td>
                       <td>₹{Number(oi.unitPrice).toLocaleString()}</td>
                       <td className="font-semibold">₹{Number(oi.totalPrice).toLocaleString()}</td>
                     </tr>
