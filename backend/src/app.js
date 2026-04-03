@@ -32,6 +32,10 @@ const auditRoutes = require('./routes/audit.routes');
 const app = express();
 const server = http.createServer(app);
 
+// --- FIX: Trust the Render Reverse Proxy ---
+// This tells Express to trust the 'X-Forwarded-For' header from Render
+app.set('trust proxy', 1);
+
 // Setup Socket.IO
 const io = setupSocket(server);
 app.set('io', io);
