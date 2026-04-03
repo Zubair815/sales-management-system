@@ -40,7 +40,10 @@ const updateTemplate = async (req, res) => {
 const uploadLogo = async (req, res) => {
   try {
     if (!req.file) return errorResponse(res, 'No file uploaded', 400);
-    const logoPath = `/uploads/logos/${req.file.filename}`;
+    
+    // --- UPDATED: Use Cloudinary's direct URL ---
+    const logoPath = req.file.path; 
+    
     await prisma.printTemplate.updateMany({ data: { logoPath } });
     return successResponse(res, { logoPath }, 'Logo uploaded');
   } catch (e) { return errorResponse(res, 'Failed to upload logo', 500); }
