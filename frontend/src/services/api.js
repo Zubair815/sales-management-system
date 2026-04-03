@@ -24,4 +24,14 @@ api.interceptors.response.use(
   }
 )
 
+// ==========================================
+// SPECIFIC API CALLS
+// ==========================================
+
+// Submit a Prepared Order to the Admin
+export const submitOrder = async (orderId) => {
+  const response = await api.patch(`/orders/${orderId}/submit`);
+  return response.data;
+};
+
 export default api

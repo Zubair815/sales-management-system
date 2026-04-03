@@ -3,7 +3,7 @@ import api from '../services/api'
 import toast from 'react-hot-toast'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader, EmptyState } from '../components/index.jsx'
-import { Plus, Eye, Check, Truck, CheckCircle, XCircle, Printer, ShoppingCart, Trash2 } from 'lucide-react'
+import { Plus, Eye, Check, Truck, CheckCircle, XCircle, Printer, ShoppingCart, Trash2, Send } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import OrderPrintTemplate from '../components/OrderPrintTemplate.jsx'
 
@@ -49,7 +49,7 @@ export default function OrdersPage() {
       const items = d.items.filter(i => i.itemId).map(i => ({ itemId: i.itemId, quantity: parseInt(i.quantity), unitPrice: parseFloat(i.unitPrice) }))
       if (!items.length) return toast.error('Add at least one item')
       await api.post('/orders', { partyId: d.partyId, items, notes: d.notes })
-      toast.success('Order created'); setModalOpen(false); fetch()
+      toast.success('Order prepared and saved to drafts'); setModalOpen(false); fetch()
     } catch (e) { toast.error(e.response?.data?.message || 'Error') }
   }
 
@@ -59,6 +59,16 @@ export default function OrdersPage() {
       toast.success(`Order ${action}d`); fetch()
       if (viewOrder) setViewOrder(null)
     } catch (e) { toast.error(e.response?.data?.message || 'Failed') }
+  }
+
+  // --- NEW: Submit order to admin
+  const handleSubmitOrder = async (id) => {
+    try {
+      await api.patch(`/orders/${id}/submit`)
+      toast.success('Order submitted to Admin successfully!')
+      fetch()
+      if (viewOrder) setViewOrder(null)
+    } catch (e) { toast.error(e.response?.data?.message || 'Failed to submit order') }
   }
 
   const openPrint = async (orderId) => {
@@ -77,7 +87,8 @@ export default function OrdersPage() {
 
   const total = watchItems?.reduce((s, i) => s + (parseFloat(i.unitPrice) || 0) * (parseInt(i.quantity) || 0), 0) || 0
 
-  const STATUSES = ['', 'Pending', 'Approved', 'Dispatched', 'Delivered', 'Cancelled']
+  // Added 'Prepared' to the filter dropdown
+  const STATUSES = ['', 'Prepared', 'Pending', 'Approved', 'Dispatched', 'Delivered', 'Cancelled']
 
   return (
     <div>
@@ -109,12 +120,16 @@ export default function OrdersPage() {
                     <td className="text-gray-500 text-xs">{new Date(o.createdAt).toLocaleDateString()}</td>
                     <td>
                       <div className="flex items-center gap-1">
-                        <button onClick={() => setViewOrder(o)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400"><Eye size={14} /></button>
-                        <button onClick={() => openPrint(o.id)} className="p-1.5 hover:bg-gray-50 hover:text-gray-700 rounded text-gray-400"><Printer size={14} /></button>
+                        <button onClick={() => setViewOrder(o)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400" title="View"><Eye size={14} /></button>
+                        <button onClick={() => openPrint(o.id)} className="p-1.5 hover:bg-gray-50 hover:text-gray-700 rounded text-gray-400" title="Print"><Printer size={14} /></button>
+                        
+                        {/* New Submit Button for Salesperson */}
+                        {isSp && o.status === 'Prepared' && <button onClick={() => handleSubmitOrder(o.id)} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400" title="Submit to Admin"><Send size={14} /></button>}
+
                         {canApprove && o.status === 'Pending' && <button onClick={() => statusAction(o.id, 'approve')} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400" title="Approve"><Check size={14} /></button>}
                         {canApprove && o.status === 'Approved' && <button onClick={() => statusAction(o.id, 'dispatch')} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400" title="Dispatch"><Truck size={14} /></button>}
                         {canApprove && o.status === 'Dispatched' && <button onClick={() => statusAction(o.id, 'deliver')} className="p-1.5 hover:bg-purple-50 hover:text-purple-600 rounded text-gray-400" title="Deliver"><CheckCircle size={14} /></button>}
-                        {(o.status === 'Pending' || (canApprove && o.status === 'Approved')) && <button onClick={() => setCancelTarget(o)} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400" title="Cancel"><XCircle size={14} /></button>}
+                        {(o.status === 'Pending' || o.status === 'Prepared' || (canApprove && o.status === 'Approved')) && <button onClick={() => setCancelTarget(o)} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400" title="Cancel"><XCircle size={14} /></button>}
                       </div>
                     </td>
                   </tr>
@@ -178,7 +193,7 @@ export default function OrdersPage() {
             <div className="text-sm text-gray-500">Total: <span className="text-lg font-bold text-gray-900">₹{total.toLocaleString()}</span></div>
             <div className="flex gap-3">
               <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">Cancel</button>
-              <button type="submit" className="btn-primary">Create Order</button>
+              <button type="submit" className="btn-primary">Save as Draft</button>
             </div>
           </div>
         </form>
@@ -215,13 +230,18 @@ export default function OrdersPage() {
               {viewOrder.taxAmount > 0 && <p className="text-sm text-gray-500">Tax: ₹{Number(viewOrder.taxAmount).toLocaleString()}</p>}
               <p className="text-lg font-bold text-gray-900">Grand Total: ₹{Number(viewOrder.grandTotal).toLocaleString()}</p>
             </div>
-            {canApprove && (
-              <div className="flex gap-2 pt-2 border-t border-gray-100 flex-wrap">
-                {viewOrder.status === 'Pending' && <button onClick={() => statusAction(viewOrder.id, 'approve')} className="btn-success btn-sm"><Check size={14} />Approve</button>}
-                {viewOrder.status === 'Approved' && <button onClick={() => statusAction(viewOrder.id, 'dispatch')} className="btn-primary btn-sm"><Truck size={14} />Dispatch</button>}
-                {viewOrder.status === 'Dispatched' && <button onClick={() => statusAction(viewOrder.id, 'deliver')} className="btn-primary btn-sm"><CheckCircle size={14} />Mark Delivered</button>}
-              </div>
-            )}
+            
+            <div className="flex gap-2 pt-2 border-t border-gray-100 flex-wrap">
+              {/* Salesperson Actions */}
+              {isSp && viewOrder.status === 'Prepared' && (
+                <button type="button" onClick={() => handleSubmitOrder(viewOrder.id)} className="btn-primary btn-sm"><Send size={14} /> Submit to Admin</button>
+              )}
+              
+              {/* Admin Actions */}
+              {canApprove && viewOrder.status === 'Pending' && <button onClick={() => statusAction(viewOrder.id, 'approve')} className="btn-success btn-sm"><Check size={14} />Approve</button>}
+              {canApprove && viewOrder.status === 'Approved' && <button onClick={() => statusAction(viewOrder.id, 'dispatch')} className="btn-primary btn-sm"><Truck size={14} />Dispatch</button>}
+              {canApprove && viewOrder.status === 'Dispatched' && <button onClick={() => statusAction(viewOrder.id, 'deliver')} className="btn-primary btn-sm"><CheckCircle size={14} />Mark Delivered</button>}
+            </div>
           </div>
         </Modal>
       )}

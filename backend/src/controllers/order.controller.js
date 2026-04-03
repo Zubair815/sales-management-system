@@ -95,6 +95,7 @@ const createOrder = async (req, res) => {
       const newOrder = await tx.order.create({
         data: {
           orderNumber, salespersonId, partyId, totalAmount, taxAmount: tax, grandTotal, notes,
+          status: 'Prepared', // <-- NEW: Forces draft state.
           orderItems: { create: orderItems },
         },
         include: { orderItems: true, party: true, salesperson: { select: { name: true, employeeId: true } } },
@@ -102,13 +103,50 @@ const createOrder = async (req, res) => {
       return newOrder;
     });
 
-    const io = req.app.get('io');
-    if (io) io.to(`admin`).emit('new_order', { orderId: order.id, orderNumber, salesperson: order.salesperson.name });
+    // Notice we do NOT send the socket notification to the Admin here anymore.
+    // The Admin shouldn't know about 'Prepared' orders until they are submitted.
 
-    await createAuditLog({ userId: req.user.id, userType: req.user.role, action: 'CREATE_ORDER', module: 'OrderManagement', recordId: order.id, newValues: { orderNumber, grandTotal }, ipAddress: req.ip });
-    return successResponse(res, order, 'Order created', 201);
+    await createAuditLog({ userId: req.user.id, userType: req.user.role, action: 'PREPARE_ORDER', module: 'OrderManagement', recordId: order.id, newValues: { orderNumber, grandTotal }, ipAddress: req.ip });
+    return successResponse(res, order, 'Order prepared and saved to drafts', 201);
   } catch (error) {
     return errorResponse(res, error.message || 'Failed to create order', 500);
+  }
+};
+
+// --- NEW FUNCTION: Submit Order to Admin ---
+const submitOrder = async (req, res) => {
+  try {
+    const order = await prisma.order.findFirst({
+      where: { id: req.params.id, deletedAt: null },
+      include: { salesperson: { select: { name: true } } }
+    });
+
+    if (!order) return errorResponse(res, 'Order not found', 404);
+    
+    // Security check
+    if (req.user.role === 'Salesperson' && order.salespersonId !== req.user.id) {
+      return errorResponse(res, 'Unauthorized to submit this order', 403);
+    }
+
+    // Status lock check
+    if (order.status !== 'Prepared') {
+      return errorResponse(res, `Only Prepared orders can be submitted. Current status: ${order.status}`, 400);
+    }
+
+    const updated = await prisma.order.update({
+      where: { id: req.params.id },
+      data: { status: 'Pending' }
+    });
+
+    // NOW we notify the Admin that a new order is ready for review
+    const io = req.app.get('io');
+    if (io) io.to(`admin`).emit('new_order', { orderId: order.id, orderNumber: order.orderNumber, salesperson: order.salesperson.name });
+
+    await createAuditLog({ userId: req.user.id, userType: req.user.role, action: 'SUBMIT_ORDER', module: 'OrderManagement', recordId: order.id, newValues: { status: 'Pending' }, ipAddress: req.ip });
+    
+    return successResponse(res, updated, 'Order submitted to Admin successfully');
+  } catch (error) {
+    return errorResponse(res, 'Failed to submit order', 500);
   }
 };
 
@@ -117,11 +155,20 @@ const updateOrder = async (req, res) => {
     const where = { id: req.params.id, deletedAt: null };
     if (req.user.role === 'Salesperson') where.salespersonId = req.user.id;
     const existing = await prisma.order.findFirst({ where });
+    
     if (!existing) return errorResponse(res, 'Order not found', 404);
-    if (existing.status !== 'Pending') return errorResponse(res, 'Only pending orders can be edited', 400);
+    
+    // Allow editing only if Prepared (or Pending if you want them to fix typos before Admin approval)
+    if (!['Prepared', 'Pending'].includes(existing.status)) {
+      return errorResponse(res, 'Locked: Cannot edit approved or dispatched orders', 400);
+    }
 
     const { notes } = req.body;
-    const order = await prisma.order.update({ where: { id: req.params.id }, data: { ...(notes !== undefined && { notes }) } });
+    const order = await prisma.order.update({ 
+      where: { id: req.params.id }, 
+      data: { ...(notes !== undefined && { notes }) } 
+    });
+    
     return successResponse(res, order, 'Order updated');
   } catch (error) {
     return errorResponse(res, 'Failed to update order', 500);
@@ -160,7 +207,8 @@ const deliverOrder = async (req, res) => {
 const cancelOrder = async (req, res) => {
   try {
     const allowedRoles = ['SuperAdmin', 'Admin'];
-    const allowedStatuses = req.user.role === 'Salesperson' ? ['Pending'] : ['Pending', 'Approved'];
+    // Salespersons can cancel prepared/pending. Admins can cancel approved ones too.
+    const allowedStatuses = req.user.role === 'Salesperson' ? ['Prepared', 'Pending'] : ['Prepared', 'Pending', 'Approved'];
     return await changeOrderStatus(req, res, 'Cancelled', allowedStatuses);
   } catch (e) { return errorResponse(res, 'Failed to cancel order', 500); }
 };
@@ -221,4 +269,17 @@ const batchPrint = async (req, res) => {
   }
 };
 
-module.exports = { getOrders, getOrder, createOrder, updateOrder, deleteOrder, approveOrder, dispatchOrder, deliverOrder, cancelOrder, getPrintData, batchPrint };
+module.exports = { 
+  getOrders, 
+  getOrder, 
+  createOrder, 
+  submitOrder, // <--- Exported the new function
+  updateOrder, 
+  deleteOrder, 
+  approveOrder, 
+  dispatchOrder, 
+  deliverOrder, 
+  cancelOrder, 
+  getPrintData, 
+  batchPrint 
+};

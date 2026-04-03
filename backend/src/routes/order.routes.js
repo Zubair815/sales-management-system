@@ -13,6 +13,9 @@ router.get('/:id', ctrl.getOrder);
 router.put('/:id', sanitizeInputs, ctrl.updateOrder);
 router.delete('/:id', authorize('SuperAdmin'), ctrl.deleteOrder);
 
+// --- NEW ROUTE: Submit Order (Moves from Prepared -> Pending) ---
+router.patch('/:id/submit', authorize('Salesperson', 'SuperAdmin', 'Admin'), ctrl.submitOrder);
+
 // Status transitions - Admin/SuperAdmin only
 router.patch('/:id/approve', authorize('SuperAdmin', 'Admin'), checkModulePermission('OrderManagement', 'FullAccess'), ctrl.approveOrder);
 router.patch('/:id/dispatch', authorize('SuperAdmin', 'Admin'), checkModulePermission('OrderManagement', 'FullAccess'), ctrl.dispatchOrder);
