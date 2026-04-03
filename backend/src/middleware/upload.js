@@ -15,7 +15,6 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: async (req, file) => {
-    // Replicates your uploadSubDir logic
     let folderName = 'sms/general';
     if (req.uploadSubDir) {
       folderName = `sms/${req.uploadSubDir}`;
@@ -23,7 +22,6 @@ const storage = new CloudinaryStorage({
 
     return {
       folder: folderName,
-      // 'auto' allows Cloudinary to accept both images AND PDFs
       resource_type: 'auto', 
       allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf']
     };
@@ -33,7 +31,7 @@ const storage = new CloudinaryStorage({
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024, // 5MB limit
+    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024, 
   }
 });
 
@@ -44,8 +42,8 @@ const logoStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'sms/logos',
-    // Keeps the specific filename logic you had before
-    public_id: 'company-logo', 
+    // --- FIX: This MUST be a function, not a string ---
+    public_id: (req, file) => 'company-logo', 
     allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp']
   },
 });
@@ -53,7 +51,7 @@ const logoStorage = new CloudinaryStorage({
 const logoUpload = multer({
   storage: logoStorage,
   limits: { 
-    fileSize: 2 * 1024 * 1024 // 2MB limit for logos
+    fileSize: 2 * 1024 * 1024 
   }
 });
 
