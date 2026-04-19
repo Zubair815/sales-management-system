@@ -11,14 +11,11 @@ export const SocketProvider = ({ children }) => {
   const [connected, setConnected] = useState(false)
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (!user || !token) return
+    if (!user) return
 
-    // --- UPDATED: Pointing directly to your live Render backend ---
-    const s = io('https://sales-management-system-rrsv.onrender.com', { 
-      auth: { token }, 
+    const s = io(import.meta.env.VITE_SOCKET_URL || window.location.origin, { 
+      withCredentials: true,
       transports: ['websocket', 'polling'],
-      withCredentials: true
     })
 
     s.on('connect', () => setConnected(true))

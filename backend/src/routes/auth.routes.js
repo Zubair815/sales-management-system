@@ -47,6 +47,11 @@ router.post('/salesperson/login',
   authController.salespersonLogin
 );
 
+// Refresh token — no auth required (uses refresh cookie)
+router.post('/refresh',
+  authController.refreshToken
+);
+
 router.post('/logout',
   authenticate,
   authController.logout

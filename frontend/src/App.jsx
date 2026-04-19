@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { SocketProvider } from './contexts/SocketContext'
@@ -25,12 +25,14 @@ import PrintTemplatePage from './pages/PrintTemplatePage'
 import MainLayout from './layouts/MainLayout'
 import LoadingSpinner from './components/LoadingSpinner'
 
+// ─── Auth Guard Components ──────────────────────────────────
+
 const ProtectedRoute = ({ children, roles }) => {
   const { user, loading } = useAuth()
   if (loading) return <LoadingSpinner />
   if (!user) return <Navigate to="/login" replace />
   if (roles && !roles.includes(user.role)) return <Navigate to="/dashboard" replace />
-  return children
+  return children || <Outlet />
 }
 
 const DashboardRedirect = () => {
@@ -41,36 +43,53 @@ const DashboardRedirect = () => {
   return <Navigate to="/salesperson" replace />
 }
 
+// ─── Route Configuration ────────────────────────────────────
+
 function AppRoutes() {
   return (
     <Routes>
+      {/* Public */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="/dashboard" element={<DashboardRedirect />} />
 
-      <Route path="/super-admin" element={<ProtectedRoute roles={['SuperAdmin']}><MainLayout><SuperAdminDashboard /></MainLayout></ProtectedRoute>} />
-      <Route path="/admin" element={<ProtectedRoute roles={['Admin']}><MainLayout><AdminDashboard /></MainLayout></ProtectedRoute>} />
-      <Route path="/salesperson" element={<ProtectedRoute roles={['Salesperson']}><MainLayout><SalespersonDashboard /></MainLayout></ProtectedRoute>} />
+      {/* Protected layout routes — MainLayout wraps all children via <Outlet /> */}
+      <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
 
-      <Route path="/admins" element={<ProtectedRoute roles={['SuperAdmin']}><MainLayout><AdminsPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/admins/:id/permissions" element={<ProtectedRoute roles={['SuperAdmin']}><MainLayout><PermissionsPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/salespersons" element={<ProtectedRoute roles={['SuperAdmin','Admin']}><MainLayout><SalespersonsPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/parties" element={<ProtectedRoute roles={['SuperAdmin','Admin']}><MainLayout><PartiesPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/inventory" element={<ProtectedRoute roles={['SuperAdmin','Admin']}><MainLayout><InventoryPage /></MainLayout></ProtectedRoute>} />
+        {/* SuperAdmin only */}
+        <Route path="/super-admin" element={<ProtectedRoute roles={['SuperAdmin']}><SuperAdminDashboard /></ProtectedRoute>} />
+        <Route path="/admins" element={<ProtectedRoute roles={['SuperAdmin']}><AdminsPage /></ProtectedRoute>} />
+        <Route path="/admins/:id/permissions" element={<ProtectedRoute roles={['SuperAdmin']}><PermissionsPage /></ProtectedRoute>} />
+        <Route path="/audit-logs" element={<ProtectedRoute roles={['SuperAdmin']}><AuditLogsPage /></ProtectedRoute>} />
+        <Route path="/system-config" element={<ProtectedRoute roles={['SuperAdmin']}><SystemConfigPage /></ProtectedRoute>} />
 
-      <Route path="/orders" element={<ProtectedRoute><MainLayout><OrdersPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/expenses" element={<ProtectedRoute><MainLayout><ExpensesPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/payments" element={<ProtectedRoute><MainLayout><PaymentsPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/announcements" element={<ProtectedRoute><MainLayout><AnnouncementsPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/reports" element={<ProtectedRoute roles={['SuperAdmin','Admin']}><MainLayout><ReportsPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/audit-logs" element={<ProtectedRoute roles={['SuperAdmin']}><MainLayout><AuditLogsPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/system-config" element={<ProtectedRoute roles={['SuperAdmin']}><MainLayout><SystemConfigPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/print-templates" element={<ProtectedRoute roles={['SuperAdmin','Admin']}><MainLayout><PrintTemplatePage /></MainLayout></ProtectedRoute>} />
+        {/* Admin only */}
+        <Route path="/admin" element={<ProtectedRoute roles={['Admin']}><AdminDashboard /></ProtectedRoute>} />
 
+        {/* Admin + SuperAdmin */}
+        <Route path="/salespersons" element={<ProtectedRoute roles={['SuperAdmin', 'Admin']}><SalespersonsPage /></ProtectedRoute>} />
+        <Route path="/parties" element={<ProtectedRoute roles={['SuperAdmin', 'Admin']}><PartiesPage /></ProtectedRoute>} />
+        <Route path="/inventory" element={<ProtectedRoute roles={['SuperAdmin', 'Admin']}><InventoryPage /></ProtectedRoute>} />
+        <Route path="/reports" element={<ProtectedRoute roles={['SuperAdmin', 'Admin']}><ReportsPage /></ProtectedRoute>} />
+        <Route path="/print-templates" element={<ProtectedRoute roles={['SuperAdmin', 'Admin']}><PrintTemplatePage /></ProtectedRoute>} />
+
+        {/* Salesperson only */}
+        <Route path="/salesperson" element={<ProtectedRoute roles={['Salesperson']}><SalespersonDashboard /></ProtectedRoute>} />
+
+        {/* All authenticated roles */}
+        <Route path="/orders" element={<OrdersPage />} />
+        <Route path="/expenses" element={<ExpensesPage />} />
+        <Route path="/payments" element={<PaymentsPage />} />
+        <Route path="/announcements" element={<AnnouncementsPage />} />
+      </Route>
+
+      {/* Catch-all */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   )
 }
+
+// ─── App Root ───────────────────────────────────────────────
 
 export default function App() {
   return (

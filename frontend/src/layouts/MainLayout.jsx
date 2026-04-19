@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useSocket } from '../contexts/SocketContext'
 import {
@@ -146,7 +146,7 @@ export default function MainLayout({ children }) {
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto p-6">
-          {children}
+          {children || <Outlet />}
         </main>
       </div>
     </div>

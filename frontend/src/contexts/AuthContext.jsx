@@ -4,21 +4,15 @@ import api from '../services/api'
 const AuthContext = createContext(null)
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('user')) } catch { return null }
-  })
+  const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
+  // On mount, try to get current user (cookies are sent automatically)
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (token) {
-      api.get('/auth/me')
-        .then(r => setUser(r.data.data))
-        .catch(() => { localStorage.removeItem('token'); localStorage.removeItem('user'); setUser(null) })
-        .finally(() => setLoading(false))
-    } else {
-      setLoading(false)
-    }
+    api.get('/auth/me')
+      .then(r => setUser(r.data.data))
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false))
   }, [])
 
   const login = useCallback(async (role, credentials) => {
@@ -26,17 +20,13 @@ export const AuthProvider = ({ children }) => {
       : role === 'Admin' ? '/auth/admin/login'
       : '/auth/salesperson/login'
     const res = await api.post(endpoint, credentials)
-    const { token, user } = res.data.data
-    localStorage.setItem('token', token)
-    localStorage.setItem('user', JSON.stringify(user))
+    const { user } = res.data.data
     setUser(user)
     return user
   }, [])
 
   const logout = useCallback(async () => {
     try { await api.post('/auth/logout') } catch {}
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
     setUser(null)
   }, [])
 

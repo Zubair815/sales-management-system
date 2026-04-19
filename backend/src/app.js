@@ -7,9 +7,11 @@ const compression = require('compression');
 const morgan = require('morgan');
 const hpp = require('hpp');
 const path = require('path');
+const cookieParser = require('cookie-parser');
 
 const { setupSocket } = require('./sockets/socket');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
+const { apiLimiter } = require('./middleware/rateLimiter');
 const logger = require('./utils/logger');
 
 // Routes
@@ -76,13 +78,16 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 }));
 // ----------------------------------
 
-// Body parsing
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Cookie parsing (must be before routes)
+app.use(cookieParser());
+
+// Body parsing — reduced from 10mb to 1mb to mitigate DDoS
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // HPP protection
 app.use(hpp());
@@ -105,6 +110,9 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Global API rate limiter
+app.use('/api', apiLimiter);
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/super-admin', superAdminRoutes);
@@ -125,10 +133,5 @@ app.use('/api/audit', auditRoutes);
 // Error handling
 app.use(notFoundHandler);
 app.use(errorHandler);
-
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  logger.info(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
-});
 
 module.exports = { app, server };

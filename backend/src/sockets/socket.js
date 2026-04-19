@@ -1,5 +1,5 @@
 const { Server } = require('socket.io');
-const { verifyToken } = require('../utils/jwt');
+const { verifyAccessToken } = require('../utils/jwt');
 const logger = require('../utils/logger');
 
 const setupSocket = (server) => {
@@ -16,7 +16,7 @@ const setupSocket = (server) => {
     try {
       const token = socket.handshake.auth?.token || socket.handshake.query?.token;
       if (!token) return next(new Error('Authentication required'));
-      const decoded = verifyToken(token);
+      const decoded = verifyAccessToken(token);
       socket.user = decoded;
       next();
     } catch (err) {

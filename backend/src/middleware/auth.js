@@ -1,17 +1,18 @@
-const { verifyToken } = require('../utils/jwt');
+const { verifyAccessToken } = require('../utils/jwt');
 const { errorResponse } = require('../utils/response');
 const prisma = require('../config/database');
 
-// Authenticate JWT token
+// Authenticate JWT token — reads from HttpOnly cookie (primary) or Authorization header (fallback)
 const authenticate = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const token = req.cookies?.accessToken ||
+      (req.headers.authorization?.startsWith('Bearer ') && req.headers.authorization.split(' ')[1]);
+
+    if (!token) {
       return errorResponse(res, 'Authentication required', 401);
     }
 
-    const token = authHeader.split(' ')[1];
-    const decoded = verifyToken(token);
+    const decoded = verifyAccessToken(token);
 
     // Verify user still exists and is active
     let user = null;
@@ -38,7 +39,7 @@ const authenticate = async (req, res, next) => {
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
-      return errorResponse(res, 'Token expired, please login again', 401);
+      return errorResponse(res, 'Token expired', 401);
     }
     if (error.name === 'JsonWebTokenError') {
       return errorResponse(res, 'Invalid token', 401);

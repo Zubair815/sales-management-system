@@ -4,8 +4,10 @@
   "description": "Sales Management System Backend",
   "main": "src/app.js",
   "scripts": {
-    "dev": "nodemon src/app.js",
-    "start": "node src/app.js",
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "migrate": "npx prisma migrate deploy",
     "migrate:dev": "npx prisma migrate dev",
     "seed": "node scripts/seed.js",
@@ -17,6 +19,7 @@
     "bcryptjs": "^2.4.3",
     "cloudinary": "^1.41.3",
     "compression": "^1.7.4",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "exceljs": "^4.4.0",
@@ -37,7 +40,10 @@
     "xss": "^1.0.14"
   },
   "devDependencies": {
+    "@faker-js/faker": "^10.4.0",
     "nodemon": "^3.0.2",
-    "prisma": "^5.7.0"
+    "prisma": "^5.7.0",
+    "supertest": "^7.2.2",
+    "vitest": "^4.1.4"
   }
 }

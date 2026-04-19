@@ -1,26 +1,71 @@
 import axios from 'axios'
 
 const api = axios.create({
-  // UPDATE: Point directly to your live Render backend
-  baseURL: 'https://sales-management-system-rrsv.onrender.com/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
+  withCredentials: true,  // Send HttpOnly cookies cross-origin
   headers: { 'Content-Type': 'application/json' },
 })
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) config.headers.Authorization = `Bearer ${token}`
-  return config
-})
+// No request interceptor needed — cookies are sent automatically via withCredentials
+
+// ==========================================
+// REFRESH TOKEN INTERCEPTOR
+// Handles 401 responses by silently refreshing the access token
+// and retrying the original request. Queues concurrent requests
+// while a refresh is in progress.
+// ==========================================
+
+let isRefreshing = false
+let failedQueue = []
+
+const processQueue = (error) => {
+  failedQueue.forEach(({ resolve, reject }) => (error ? reject(error) : resolve()))
+  failedQueue = []
+}
 
 api.interceptors.response.use(
   (res) => res,
-  (err) => {
-    if (err.response?.status === 401) {
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-      window.location.href = '/login'
+  async (error) => {
+    const originalRequest = error.config
+
+    // If 401 and not already retrying
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      // Don't retry the refresh endpoint itself or login endpoints
+      if (
+        originalRequest.url?.includes('/auth/refresh') ||
+        originalRequest.url?.includes('/login')
+      ) {
+        // Only redirect to login if refresh itself failed
+        if (originalRequest.url?.includes('/auth/refresh')) {
+          window.location.href = '/login'
+        }
+        return Promise.reject(error)
+      }
+
+      if (isRefreshing) {
+        // Queue the request while refresh is in progress
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject })
+        }).then(() => api(originalRequest))
+      }
+
+      originalRequest._retry = true
+      isRefreshing = true
+
+      try {
+        await api.post('/auth/refresh')
+        processQueue(null)
+        return api(originalRequest) // Retry original request with new cookie
+      } catch (refreshError) {
+        processQueue(refreshError)
+        window.location.href = '/login'
+        return Promise.reject(refreshError)
+      } finally {
+        isRefreshing = false
+      }
     }
-    return Promise.reject(err)
+
+    return Promise.reject(error)
   }
 )
 
@@ -30,8 +75,8 @@ api.interceptors.response.use(
 
 // Submit a Prepared Order to the Admin
 export const submitOrder = async (orderId) => {
-  const response = await api.patch(`/orders/${orderId}/submit`);
-  return response.data;
-};
+  const response = await api.patch(`/orders/${orderId}/submit`)
+  return response.data
+}
 
 export default api
