@@ -30,15 +30,12 @@ api.interceptors.response.use(
 
     // If 401 and not already retrying
     if (error.response?.status === 401 && !originalRequest._retry) {
-      // Don't retry the refresh endpoint itself or login endpoints
+      // Don't retry these endpoints — they are expected to fail without a session
       if (
         originalRequest.url?.includes('/auth/refresh') ||
+        originalRequest.url?.includes('/auth/me') ||
         originalRequest.url?.includes('/login')
       ) {
-        // Only redirect to login if refresh itself failed
-        if (originalRequest.url?.includes('/auth/refresh')) {
-          window.location.href = '/login'
-        }
         return Promise.reject(error)
       }
 
