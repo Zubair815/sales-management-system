@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
 import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader, FormField, EmptyState } from '../components/index.jsx'
 import { Plus, Edit, Trash2, Shield, ToggleLeft, ToggleRight, Key, Users } from 'lucide-react'
+import { formatPhone } from '../utils/formatPhone'
 
 export default function AdminsPage() {
   const [admins, setAdmins] = useState([])
@@ -98,7 +99,7 @@ export default function AdminsPage() {
                   <tr key={admin.id}>
                     <td data-label="Name" className="font-medium text-gray-900">{admin.name}</td>
                     <td data-label="Email" className="text-gray-600">{admin.email}</td>
-                    <td data-label="Phone" className="text-gray-600">{admin.phone || '-'}</td>
+                    <td data-label="Phone" className="text-gray-600">{formatPhone(admin.phone)}</td>
                     <td data-label="Status"><StatusBadge status={admin.status} /></td>
                     <td data-label="Last Login" className="text-gray-500">{admin.lastLoginAt ? new Date(admin.lastLoginAt).toLocaleDateString() : 'Never'}</td>
                     <td data-label="Actions" data-cell="actions">

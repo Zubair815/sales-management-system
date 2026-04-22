@@ -5,6 +5,18 @@ import toast from 'react-hot-toast'
 import { PageHeader } from '../components/index.jsx'
 import { Save, Settings } from 'lucide-react'
 
+// Known config labels and types for enhanced UI
+const CONFIG_META = {
+  stock_deduction_rule: { label: 'Stock Deduction Rule', type: 'select', options: ['Approval', 'Dispatch'] },
+  expense_proof_mandatory: { label: 'Expense Proof Mandatory', type: 'select', options: ['true', 'false'] },
+  payment_edit_window_hours: { label: 'Payment Edit Window (hours)', type: 'number' },
+  low_stock_threshold_global: { label: 'Global Low Stock Threshold', type: 'number' },
+}
+
+function formatConfigLabel(key) {
+  return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
 export function SystemConfigPage() {
   const [configs, setConfigs] = useState({})
   const [loading, setLoading] = useState(true)
@@ -22,12 +34,8 @@ export function SystemConfigPage() {
 
   if (loading) return <div className="flex justify-center py-16"><div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" /></div>
 
-  const CONFIG_LABELS = {
-    stock_deduction_rule: { label: 'Stock Deduction Rule', type: 'select', options: ['Approval', 'Dispatch'] },
-    expense_proof_mandatory: { label: 'Expense Proof Mandatory', type: 'select', options: ['true', 'false'] },
-    payment_edit_window_hours: { label: 'Payment Edit Window (hours)', type: 'number' },
-    low_stock_threshold_global: { label: 'Global Low Stock Threshold', type: 'number' },
-  }
+  // Merge known config keys with any dynamic keys from API
+  const allKeys = [...new Set([...Object.keys(CONFIG_META), ...Object.keys(configs)])]
 
   return (
     <div>
@@ -35,18 +43,23 @@ export function SystemConfigPage() {
         actions={<button onClick={save} disabled={saving} className="btn-primary"><Save size={16} />{saving ? 'Saving...' : 'Save Config'}</button>} />
       <div className="card max-w-2xl">
         <div className="space-y-4">
-          {Object.entries(CONFIG_LABELS).map(([key, cfg]) => (
-            <div key={key}>
-              <label className="label">{cfg.label}</label>
-              {cfg.type === 'select' ? (
-                <select value={configs[key] || ''} onChange={e => setConfigs(c => ({ ...c, [key]: e.target.value }))} className="input">
-                  {cfg.options.map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
-              ) : (
-                <input type={cfg.type || 'text'} value={configs[key] || ''} onChange={e => setConfigs(c => ({ ...c, [key]: e.target.value }))} className="input" />
-              )}
-            </div>
-          ))}
+          {allKeys.map(key => {
+            const meta = CONFIG_META[key]
+            const label = meta?.label || formatConfigLabel(key)
+            const type = meta?.type || 'text'
+            return (
+              <div key={key}>
+                <label className="label">{label}</label>
+                {type === 'select' && meta?.options ? (
+                  <select value={configs[key] || ''} onChange={e => setConfigs(c => ({ ...c, [key]: e.target.value }))} className="input">
+                    {meta.options.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                ) : (
+                  <input type={type} value={configs[key] || ''} onChange={e => setConfigs(c => ({ ...c, [key]: e.target.value }))} className="input" />
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
     </div>

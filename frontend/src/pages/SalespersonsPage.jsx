@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader, FormField, EmptyState } from '../components/index.jsx'
 import { Plus, Edit, Trash2, ToggleLeft, ToggleRight, Key, UserCheck } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { formatPhone } from '../utils/formatPhone'
 
 export default function SalespersonsPage() {
   const { hasPermission } = useAuth()
@@ -83,7 +84,7 @@ const deleteSp = async () => {
                   <tr key={sp.id}>
                     <td data-label="Employee ID" className="font-mono text-xs text-blue-700 font-semibold">{sp.employeeId}</td>
                     <td data-label="Name" className="font-medium">{sp.name}</td>
-                    <td data-label="Phone" className="text-gray-500">{sp.phone}</td>
+                    <td data-label="Phone" className="text-gray-500">{formatPhone(sp.phone)}</td>
                     <td data-label="Region" className="text-gray-500">{sp.region || '-'}</td>
                     <td data-label="Role" className="text-gray-500 text-xs">{sp.jobRole || '-'}</td>
                     <td data-label="Status"><StatusBadge status={sp.status} /></td>

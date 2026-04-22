@@ -76,6 +76,7 @@ class AuthService {
     }
 
     await userRepo.resetFailedAttempts('admin', user.id);
+    await userRepo.updateLastLogin('admin', user.id);
 
     const permissions = user.modulePermissions.reduce((acc, p) => {
       acc[p.moduleName] = p.permissionLevel;
@@ -120,6 +121,7 @@ class AuthService {
     }
 
     await userRepo.resetFailedAttempts('salesperson', user.id);
+    await userRepo.updateLastLogin('salesperson', user.id);
 
     const payload = {
       id: user.id, employeeId: user.employeeId, name: user.name,

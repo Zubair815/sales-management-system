@@ -13,13 +13,17 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     if (!user) return
 
-    const s = io(import.meta.env.VITE_SOCKET_URL || window.location.origin, { 
+    const s = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000', { 
       withCredentials: true,
       transports: ['websocket', 'polling'],
     })
 
     s.on('connect', () => setConnected(true))
     s.on('disconnect', () => setConnected(false))
+    s.on('connect_error', (err) => {
+      console.warn('Socket connection error:', err.message)
+      setConnected(false)
+    })
 
     // Global notifications
     s.on('new_announcement', (data) => {

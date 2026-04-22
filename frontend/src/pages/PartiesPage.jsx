@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form'
 import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader, FormField, EmptyState } from '../components/index.jsx'
 import { Plus, Edit, Trash2, ToggleRight, ToggleLeft, Building2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { formatPhone } from '../utils/formatPhone'
 
 export function PartiesPage() {
   const { hasPermission } = useAuth()
@@ -67,7 +68,7 @@ export function PartiesPage() {
                   <tr key={p.id}>
                     <td data-label="Name" className="font-medium">{p.name}</td>
                     <td data-label="Contact" className="text-gray-500">{p.contactName || '-'}</td>
-                    <td data-label="Phone" className="text-gray-500">{p.phone}</td>
+                    <td data-label="Phone" className="text-gray-500">{formatPhone(p.phone)}</td>
                     <td data-label="City" className="text-gray-500">{p.city || '-'}</td>
                     <td data-label="GST" className="font-mono text-xs text-gray-500">{p.gstNumber || '-'}</td>
                     <td data-label="Status"><StatusBadge status={p.status} /></td>

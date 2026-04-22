@@ -122,7 +122,7 @@ export default function LoginPage() {
         </div>
 
         <div className="mt-4 text-center">
-          <p className="text-xs text-gray-400">Demo: superadmin@sms.com / Admin1234</p>
+          <p className="text-xs text-gray-400">Sales Management System</p>
         </div>
       </div>
     </div>

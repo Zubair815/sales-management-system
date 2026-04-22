@@ -1,12 +1,13 @@
 const prisma = require('../config/database');
 const { successResponse, errorResponse } = require('../utils/response');
 
-const now = new Date();
-const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-const startOfYear = new Date(now.getFullYear(), 0, 1);
+// Date helpers moved inside functions to avoid stale module-level values
 
 const getAdminDashboard = async (req, res) => {
   try {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
     const [
       totalOrdersMTD, totalOrdersYTD,
       revenueMTD, revenueYTD,
@@ -28,7 +29,7 @@ const getAdminDashboard = async (req, res) => {
       prisma.expense.count({ where: { deletedAt: null, status: 'Pending' } }),
       prisma.payment.count({ where: { deletedAt: null, status: 'Pending' } }),
       // Last 7 days order trend
-      prisma.$queryRaw`SELECT DATE(created_at) as date, COUNT(*) as count, SUM(grand_total) as revenue FROM orders WHERE deleted_at IS NULL AND created_at >= NOW() - INTERVAL '7 days' GROUP BY DATE(created_at) ORDER BY date`,
+      prisma.$queryRaw`SELECT DATE(created_at) as date, COUNT(*) as count, SUM(grand_total) as revenue FROM orders WHERE deleted_at IS NULL AND created_at >= NOW() - INTERVAL 7 DAY GROUP BY DATE(created_at) ORDER BY date`,
       // Expenses by type
       prisma.expense.groupBy({ by: ['expenseTypeId'], where: { deletedAt: null, status: 'Approved', expenseDate: { gte: startOfMonth } }, _sum: { amount: true } }),
       // Low stock
@@ -54,6 +55,8 @@ const getAdminDashboard = async (req, res) => {
 
 const getSalespersonDashboard = async (req, res) => {
   try {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const spId = req.user.id;
     const [ordersMTD, expensesMTD, paymentsMTD, recentOrders, unreadAnnouncements, pendingExpenses, pendingPayments] = await Promise.all([
       prisma.order.aggregate({ where: { salespersonId: spId, deletedAt: null, createdAt: { gte: startOfMonth }, status: { not: 'Cancelled' } }, _sum: { grandTotal: true }, _count: true }),
