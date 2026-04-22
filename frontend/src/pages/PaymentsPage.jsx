@@ -28,16 +28,13 @@ export default function PaymentsPage() {
 const fetch = async (page = 1) => {
     setLoading(true)
     try {
-      // Add 'search' to the params here:
       const r = await api.get('/payments', { params: { page, limit: 10, status: statusFilter, search } })
       setData(r.data.data); setPagination(r.data.pagination)
     } catch { toast.error('Failed') } finally { setLoading(false) }
   }
 
-  // Add 'search' to the dependency array here:
   useEffect(() => { fetch() }, [statusFilter, search])
 
-  useEffect(() => { fetch() }, [statusFilter])
   useEffect(() => {
     if (isSp) {
       api.get('/parties', { params: { limit: 100 } }).then(r => setParties(r.data.data)).catch(() => {})
@@ -82,9 +79,9 @@ const fetch = async (page = 1) => {
         actions={isSp && <button onClick={() => { reset({}); setModalOpen(true) }} className="btn-primary"><Plus size={16} />Record Payment</button>} />
 
       <div className="card">
-        <div className="mb-4">
-        <SearchInput value={search} onChange={setSearch} placeholder="Search receipt, purpose..." />
-          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="input w-40">
+        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+          <SearchInput value={search} onChange={setSearch} placeholder="Search receipt, purpose..." />
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="input w-full sm:w-40">
             <option value="">All Status</option>
             <option value="Pending">Pending</option>
             <option value="Verified">Verified</option>
@@ -96,20 +93,20 @@ const fetch = async (page = 1) => {
         : data.length === 0 ? <EmptyState icon={CreditCard} title="No payments found" />
         : (
           <div className="table-container">
-            <table className="table">
+            <table className="table responsive-table">
               <thead><tr><th>Receipt #</th><th>Date</th>{!isSp && <th>Salesperson</th>}<th>Party</th><th>Amount</th><th>Mode</th><th>Status</th><th>Actions</th></tr></thead>
               <tbody>
                 {data.map(p => (
                   <tr key={p.id}>
-                    <td className="font-mono text-xs text-blue-700">{p.receiptNumber}</td>
-                    <td className="text-xs text-gray-500">{new Date(p.paymentDate).toLocaleDateString()}</td>
-                    {!isSp && <td className="text-sm font-medium">{p.salesperson?.name}</td>}
-                    <td className="text-sm">{p.party?.name}</td>
-                    <td className="font-semibold text-green-700">₹{Number(p.amount).toLocaleString()}</td>
-                    <td><span className="badge badge-blue">{p.paymentMode}</span></td>
-                    <td><StatusBadge status={p.status} /></td>
-                    <td>
-                      <div className="flex gap-1">
+                    <td data-label="Receipt #" className="font-mono text-xs text-blue-700">{p.receiptNumber}</td>
+                    <td data-label="Date" className="text-xs text-gray-500">{new Date(p.paymentDate).toLocaleDateString()}</td>
+                    {!isSp && <td data-label="Salesperson" className="text-sm font-medium">{p.salesperson?.name}</td>}
+                    <td data-label="Party" className="text-sm">{p.party?.name}</td>
+                    <td data-label="Amount" className="font-semibold text-green-700">₹{Number(p.amount).toLocaleString()}</td>
+                    <td data-label="Mode"><span className="badge badge-blue">{p.paymentMode}</span></td>
+                    <td data-label="Status"><StatusBadge status={p.status} /></td>
+                    <td data-label="Actions" data-cell="actions">
+                      <div className="flex flex-wrap gap-1 justify-end md:justify-start">
                         <button onClick={() => setViewItem(p)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400"><Eye size={14} /></button>
                         <button onClick={() => openPrint(p)} className="p-1.5 hover:bg-gray-50 hover:text-gray-700 rounded text-gray-400"><Printer size={14} /></button>
                         {canVerify && p.status === 'Pending' && (
@@ -144,7 +141,7 @@ const fetch = async (page = 1) => {
               {orders.map(o => <option key={o.id} value={o.id}>{o.orderNumber} - ₹{Number(o.grandTotal).toLocaleString()}</option>)}
             </select>
           </FormField>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Amount (₹)" required>
               <input {...register('amount', { required: true })} type="number" step="0.01" className="input" />
             </FormField>

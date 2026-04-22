@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useSocket } from '../contexts/SocketContext'
@@ -52,11 +52,34 @@ const roleColors = {
 }
 
 export default function MainLayout({ children }) {
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const { user, logout, canAccess } = useAuth()
   const { connected } = useSocket()
   const location = useLocation()
   const navigate = useNavigate()
+
+  // Detect mobile breakpoint
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768
+      setIsMobile(mobile)
+      if (!mobile) setSidebarOpen(true)
+      else setSidebarOpen(false)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Close sidebar on route change (mobile only)
+  useEffect(() => {
+    if (isMobile) setSidebarOpen(false)
+  }, [location.pathname, isMobile])
+
+  const toggleSidebar = useCallback(() => {
+    setSidebarOpen(prev => !prev)
+  }, [])
 
   const items = (navItems[user?.role] || []).filter(item =>
     !item.module || canAccess(item.module)
@@ -69,11 +92,28 @@ export default function MainLayout({ children }) {
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
+      {/* Mobile overlay backdrop */}
+      {isMobile && sidebarOpen && (
+        <div
+          className="sidebar-overlay"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-white border-r border-gray-200 flex flex-col transition-all duration-300 flex-shrink-0`}>
+      <aside
+        className={`
+          ${isMobile
+            ? `fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`
+            : `${sidebarOpen ? 'w-64' : 'w-16'} transition-all duration-300 flex-shrink-0`
+          }
+          bg-white border-r border-gray-200 flex flex-col
+        `}
+      >
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-gray-100">
-          {sidebarOpen && (
+          {(sidebarOpen || isMobile) && (
             <div className="flex items-center gap-2">
               <div className={`w-8 h-8 rounded-lg ${roleColors[user?.role]} flex items-center justify-center`}>
                 <Shield size={16} className="text-white" />
@@ -81,9 +121,18 @@ export default function MainLayout({ children }) {
               <span className="font-bold text-gray-900 text-sm">SMS</span>
             </div>
           )}
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 ml-auto">
-            {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
-          </button>
+          {/* Desktop sidebar toggle only */}
+          {!isMobile && (
+            <button onClick={toggleSidebar} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 ml-auto">
+              {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
+          )}
+          {/* Mobile close button */}
+          {isMobile && (
+            <button onClick={() => setSidebarOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 ml-auto">
+              <X size={18} />
+            </button>
+          )}
         </div>
 
         {/* Nav items */}
@@ -91,10 +140,10 @@ export default function MainLayout({ children }) {
           {items.map(({ path, label, icon: Icon }) => {
             const active = location.pathname === path || (path !== '/super-admin' && path !== '/admin' && path !== '/salesperson' && location.pathname.startsWith(path))
             return (
-              <Link key={path} to={path} className={`sidebar-link ${active ? 'active' : ''}`} title={!sidebarOpen ? label : ''}>
+              <Link key={path} to={path} className={`sidebar-link ${active ? 'active' : ''}`} title={!sidebarOpen && !isMobile ? label : ''}>
                 <Icon size={18} className="flex-shrink-0" />
-                {sidebarOpen && <span className="truncate">{label}</span>}
-                {sidebarOpen && active && <ChevronRight size={14} className="ml-auto text-blue-500" />}
+                {(sidebarOpen || isMobile) && <span className="truncate">{label}</span>}
+                {(sidebarOpen || isMobile) && active && <ChevronRight size={14} className="ml-auto text-blue-500" />}
               </Link>
             )
           })}
@@ -102,7 +151,7 @@ export default function MainLayout({ children }) {
 
         {/* User info */}
         <div className="border-t border-gray-100 p-3">
-          {sidebarOpen ? (
+          {(sidebarOpen || isMobile) ? (
             <div className="flex items-center gap-3">
               <div className={`w-8 h-8 rounded-full ${roleColors[user?.role]} flex items-center justify-center text-white text-sm font-semibold flex-shrink-0`}>
                 {user?.name?.[0]?.toUpperCase()}
@@ -126,26 +175,39 @@ export default function MainLayout({ children }) {
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 flex-shrink-0">
-          <h1 className="text-lg font-semibold text-gray-800 capitalize">
-            {location.pathname.split('/')[1]?.replace('-', ' ') || 'Dashboard'}
-          </h1>
+        <header className="h-14 md:h-16 bg-white border-b border-gray-200 flex items-center justify-between px-3 md:px-6 flex-shrink-0">
           <div className="flex items-center gap-3">
+            {/* Mobile hamburger */}
+            {isMobile && (
+              <button
+                onClick={toggleSidebar}
+                className="p-2 -ml-1 rounded-lg hover:bg-gray-100 text-gray-600"
+                aria-label="Toggle navigation"
+              >
+                <Menu size={20} />
+              </button>
+            )}
+            <h1 className="text-base md:text-lg font-semibold text-gray-800 capitalize truncate">
+              {location.pathname.split('/')[1]?.replace('-', ' ') || 'Dashboard'}
+            </h1>
+          </div>
+          <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
             <div className="flex items-center gap-1.5 text-xs text-gray-500">
               {connected ? <Wifi size={14} className="text-green-500" /> : <WifiOff size={14} className="text-gray-400" />}
-              <span>{connected ? 'Live' : 'Offline'}</span>
+              <span className="hidden sm:inline">{connected ? 'Live' : 'Offline'}</span>
             </div>
-            <div className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+            <div className={`px-2 md:px-2.5 py-1 rounded-full text-xs font-medium ${
               user?.role === 'SuperAdmin' ? 'bg-purple-100 text-purple-700' :
               user?.role === 'Admin' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
             }`}>
-              {user?.role === 'SuperAdmin' ? 'Developer ' : user?.role}
+              <span className="hidden sm:inline">{user?.role === 'SuperAdmin' ? 'Developer' : user?.role}</span>
+              <span className="sm:hidden">{user?.role === 'SuperAdmin' ? 'Dev' : user?.role?.slice(0, 5)}</span>
             </div>
           </div>
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-3 md:p-6">
           {children || <Outlet />}
         </main>
       </div>

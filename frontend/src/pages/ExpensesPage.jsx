@@ -164,7 +164,7 @@ export default function ExpensesPage() {
         title={isSp ? 'My Expenses' : (selectedSp ? `Expenses: ${selectedSp.name}` : 'Expense Reports')} 
         subtitle={!showDetailView ? `${adminReports.length} Salespersons` : `${pagination?.total ?? 0} records`}
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             
             {/* Back Button for Admin viewing details */}
             {!isSp && selectedSp && (
@@ -212,10 +212,10 @@ export default function ExpensesPage() {
       />
 
       <div className="card">
-        <div className="mb-4 flex gap-4">
+        <div className="mb-4 flex flex-col sm:flex-row gap-3">
           <SearchInput value={search} onChange={setSearch} placeholder={!showDetailView ? "Search salesperson..." : "Search description, budget..."} />
           {showDetailView && (
-            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="input w-40">
+            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="input w-full sm:w-40">
               <option value="">All Status</option>
               {isSp && <option value="Draft">Draft</option>}
               <option value="Pending">Pending</option>
@@ -312,7 +312,7 @@ export default function ExpensesPage() {
           <FormField label="Description" required error={errors.description?.message}>
             <input {...register('description', { required: true })} className="input" placeholder="Describe the expense" />
           </FormField>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Amount (₹)" required error={errors.amount?.message}>
               <input {...register('amount', { required: true })} type="number" step="0.01" className="input" />
             </FormField>
@@ -389,7 +389,7 @@ export default function ExpensesPage() {
       {viewItem && (
         <Modal open={!!viewItem} onClose={() => setViewItem(null)} title="Expense Details">
           <div className="space-y-2 text-sm">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><span className="text-gray-500">Type:</span> <span className="font-medium">{viewItem.expenseType?.name}</span></div>
               <div><span className="text-gray-500">Amount:</span> <span className="font-semibold text-green-700">₹{Number(viewItem.amount).toLocaleString()}</span></div>
               <div><span className="text-gray-500">Date:</span> <span>{new Date(viewItem.expenseDate).toLocaleDateString()}</span></div>

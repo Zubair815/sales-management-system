@@ -52,7 +52,7 @@ export default function LoginPage() {
           {/* Role selector */}
           <div className="mb-6">
             <label className="label">Login As</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {ROLES.map(r => (
                 <button key={r.value} type="button"
                   onClick={() => setRole(r.value)}

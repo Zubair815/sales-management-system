@@ -55,7 +55,7 @@ export default function PrintTemplatePage() {
     <div>
       <PageHeader title="Print Templates" subtitle="Customize your document templates" />
 
-      <div className="flex gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6">
         {TEMPLATE_TYPES.map(t => (
           <button key={t.id} onClick={() => setActive(t.id)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
@@ -80,7 +80,7 @@ export default function PrintTemplatePage() {
               <FormField label="Company Address">
                 <textarea {...register('companyAddress')} className="input" rows={2} placeholder="123 Business Street, City, State" />
               </FormField>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField label="Phone">
                   <input {...register('companyPhone')} className="input" placeholder="+91 98765 43210" />
                 </FormField>

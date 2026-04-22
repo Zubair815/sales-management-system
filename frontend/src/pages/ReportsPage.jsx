@@ -51,10 +51,10 @@ export default function ReportsPage() {
       <div className="flex flex-wrap gap-2 mb-6">
         {REPORT_TYPES.map(rt => (
           <button key={rt.id} onClick={() => { setActiveReport(rt.id); setData(null) }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
+            className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium transition-all border ${
               activeReport === rt.id ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
             }`}>
-            <rt.icon size={15} />{rt.label}
+            <rt.icon size={15} /><span className="hidden sm:inline">{rt.label}</span><span className="sm:hidden">{rt.label.split(' ')[0]}</span>
           </button>
         ))}
       </div>
@@ -62,17 +62,17 @@ export default function ReportsPage() {
       {/* Filters */}
       <div className="card mb-6">
         <h3 className="font-semibold text-gray-700 mb-4 text-sm">Filters</h3>
-        <div className="flex flex-wrap gap-3">
-          <div>
+        <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+          <div className="w-full sm:w-auto">
             <label className="label text-xs">Start Date</label>
             <input type="date" value={filters.startDate} onChange={e => setFilters(f => ({ ...f, startDate: e.target.value }))} className="input text-sm" />
           </div>
-          <div>
+          <div className="w-full sm:w-auto">
             <label className="label text-xs">End Date</label>
             <input type="date" value={filters.endDate} onChange={e => setFilters(f => ({ ...f, endDate: e.target.value }))} className="input text-sm" />
           </div>
-          <div className="flex items-end gap-2">
-            <button onClick={loadReport} disabled={loading} className="btn-primary">
+          <div className="flex items-end gap-2 flex-wrap w-full sm:w-auto">
+            <button onClick={loadReport} disabled={loading} className="btn-primary w-full sm:w-auto">
               {loading ? 'Generating...' : 'Generate Report'}
             </button>
             {data && (
@@ -115,24 +115,21 @@ function OrderPaymentReport({ data }) {
         <StatCard icon={TrendingUp} label="Outstanding" value={fmt(summary.outstandingAmount)} color="red" />
       </div>
       <div className="card">
-        <div className="table-container">
-          <table className="table">
-            <thead><tr><th>Order #</th><th>Date</th><th>Party</th><th>Salesperson</th><th>Order Amount</th><th>Paid</th><th>Balance</th></tr></thead>
+        <div className="table-container"><table className="table responsive-table"><thead><tr><th>Order #</th><th>Date</th><th>Party</th><th>Salesperson</th><th>Order Amount</th><th>Paid</th><th>Balance</th></tr></thead>
             <tbody>
               {report.map(r => (
                 <tr key={r.orderId} className={r.isOverdue ? 'bg-red-50' : ''}>
-                  <td className="font-mono text-xs text-blue-700">{r.orderNumber}</td>
-                  <td className="text-xs">{new Date(r.date).toLocaleDateString()}</td>
-                  <td>{r.party}</td>
-                  <td className="text-gray-600">{r.salesperson}</td>
-                  <td className="font-semibold">{fmt(r.orderAmount)}</td>
-                  <td className="text-green-700">{fmt(r.paymentReceived)}</td>
-                  <td className={r.balanceDue > 0 ? 'font-semibold text-red-600' : 'text-green-600'}>{fmt(r.balanceDue)}</td>
+                  <td data-label="Order #" className="font-mono text-xs text-blue-700">{r.orderNumber}</td>
+                  <td data-label="Date" className="text-xs">{new Date(r.date).toLocaleDateString()}</td>
+                  <td data-label="Party">{r.party}</td>
+                  <td data-label="Salesperson" className="text-gray-600">{r.salesperson}</td>
+                  <td data-label="Order Amount" className="font-semibold">{fmt(r.orderAmount)}</td>
+                  <td data-label="Paid" className="text-green-700">{fmt(r.paymentReceived)}</td>
+                  <td data-label="Balance" className={r.balanceDue > 0 ? 'font-semibold text-red-600' : 'text-green-600'}>{fmt(r.balanceDue)}</td>
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
+          </table></div>
       </div>
     </div>
   )
@@ -153,8 +150,14 @@ function ExpenseReport({ data }) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {typeLabels.length > 0 && <div className="card"><h3 className="section-title">By Type</h3><Doughnut data={chartData} options={{ responsive: true, plugins: { legend: { position: 'bottom' } } }} /></div>}
         <div className="card lg:col-span-2">
-          <div className="table-container"><table className="table"><thead><tr><th>Salesperson</th><th>Date</th><th>Type</th><th>Amount</th><th>Status</th></tr></thead>
-            <tbody>{expenses.map(e => (<tr key={e.id}><td>{e.salesperson?.name}</td><td className="text-xs">{new Date(e.expenseDate).toLocaleDateString()}</td><td>{e.expenseType?.name}</td><td>{fmt(e.amount)}</td><td><span className={`badge ${e.status === 'Approved' ? 'badge-green' : e.status === 'Rejected' ? 'badge-red' : 'badge-yellow'}`}>{e.status}</span></td></tr>))}</tbody>
+          <div className="table-container"><table className="table responsive-table"><thead><tr><th>Salesperson</th><th>Date</th><th>Type</th><th>Amount</th><th>Status</th></tr></thead>
+            <tbody>{expenses.map(e => (<tr key={e.id}>
+              <td data-label="Salesperson">{e.salesperson?.name}</td>
+              <td data-label="Date" className="text-xs">{new Date(e.expenseDate).toLocaleDateString()}</td>
+              <td data-label="Type">{e.expenseType?.name}</td>
+              <td data-label="Amount">{fmt(e.amount)}</td>
+              <td data-label="Status"><span className={`badge ${e.status === 'Approved' ? 'badge-green' : e.status === 'Rejected' ? 'badge-red' : 'badge-yellow'}`}>{e.status}</span></td>
+            </tr>))}</tbody>
           </table></div>
         </div>
       </div>
@@ -173,8 +176,16 @@ function PaymentCollectionReport({ data }) {
         <StatCard icon={CreditCard} label="Total Records" value={summary.totalPayments} color="blue" />
       </div>
       <div className="card">
-        <div className="table-container"><table className="table"><thead><tr><th>Receipt #</th><th>Date</th><th>Party</th><th>Salesperson</th><th>Amount</th><th>Mode</th><th>Status</th></tr></thead>
-          <tbody>{payments.map(p => (<tr key={p.id}><td className="font-mono text-xs">{p.receiptNumber}</td><td className="text-xs">{new Date(p.paymentDate).toLocaleDateString()}</td><td>{p.party?.name}</td><td>{p.salesperson?.name}</td><td className="font-semibold text-green-700">{fmt(p.amount)}</td><td><span className="badge badge-blue">{p.paymentMode}</span></td><td><span className={`badge ${p.status === 'Verified' ? 'badge-green' : p.status === 'Rejected' ? 'badge-red' : 'badge-yellow'}`}>{p.status}</span></td></tr>))}</tbody>
+        <div className="table-container"><table className="table responsive-table"><thead><tr><th>Receipt #</th><th>Date</th><th>Party</th><th>Salesperson</th><th>Amount</th><th>Mode</th><th>Status</th></tr></thead>
+          <tbody>{payments.map(p => (<tr key={p.id}>
+            <td data-label="Receipt #" className="font-mono text-xs">{p.receiptNumber}</td>
+            <td data-label="Date" className="text-xs">{new Date(p.paymentDate).toLocaleDateString()}</td>
+            <td data-label="Party">{p.party?.name}</td>
+            <td data-label="Salesperson">{p.salesperson?.name}</td>
+            <td data-label="Amount" className="font-semibold text-green-700">{fmt(p.amount)}</td>
+            <td data-label="Mode"><span className="badge badge-blue">{p.paymentMode}</span></td>
+            <td data-label="Status"><span className={`badge ${p.status === 'Verified' ? 'badge-green' : p.status === 'Rejected' ? 'badge-red' : 'badge-yellow'}`}>{p.status}</span></td>
+          </tr>))}</tbody>
         </table></div>
       </div>
     </div>
@@ -186,8 +197,18 @@ function SalespersonReport({ data }) {
   return (
     <div className="space-y-4">
       <div className="card">
-        <div className="table-container"><table className="table"><thead><tr><th>Rank</th><th>Salesperson</th><th>Region</th><th>Orders</th><th>Revenue</th><th>Avg Order</th><th>Expenses</th><th>Collections</th><th>Target %</th></tr></thead>
-          <tbody>{report.map((sp, i) => (<tr key={i}><td><span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>{i+1}</span></td><td><div><p className="font-medium">{sp.salesperson}</p><p className="text-xs text-gray-400">{sp.employeeId}</p></div></td><td className="text-gray-500">{sp.region || '-'}</td><td>{sp.totalOrders}</td><td className="font-semibold text-green-700">{fmt(sp.totalRevenue)}</td><td>{fmt(sp.avgOrderValue)}</td><td className="text-orange-600">{fmt(sp.totalExpenses)}</td><td className="text-blue-600">{fmt(sp.totalCollected)}</td><td>{sp.targetAchievement ? <span className={`badge ${parseFloat(sp.targetAchievement) >= 100 ? 'badge-green' : 'badge-yellow'}`}>{sp.targetAchievement}%</span> : '-'}</td></tr>))}</tbody>
+        <div className="table-container"><table className="table responsive-table"><thead><tr><th>Rank</th><th>Salesperson</th><th>Region</th><th>Orders</th><th>Revenue</th><th>Avg Order</th><th>Expenses</th><th>Collections</th><th>Target %</th></tr></thead>
+          <tbody>{report.map((sp, i) => (<tr key={i}>
+            <td data-label="Rank"><span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>{i+1}</span></td>
+            <td data-label="Salesperson"><div><p className="font-medium">{sp.salesperson}</p><p className="text-xs text-gray-400">{sp.employeeId}</p></div></td>
+            <td data-label="Region" className="text-gray-500">{sp.region || '-'}</td>
+            <td data-label="Orders">{sp.totalOrders}</td>
+            <td data-label="Revenue" className="font-semibold text-green-700">{fmt(sp.totalRevenue)}</td>
+            <td data-label="Avg Order">{fmt(sp.avgOrderValue)}</td>
+            <td data-label="Expenses" className="text-orange-600">{fmt(sp.totalExpenses)}</td>
+            <td data-label="Collections" className="text-blue-600">{fmt(sp.totalCollected)}</td>
+            <td data-label="Target %">{sp.targetAchievement ? <span className={`badge ${parseFloat(sp.targetAchievement) >= 100 ? 'badge-green' : 'badge-yellow'}`}>{sp.targetAchievement}%</span> : '-'}</td>
+          </tr>))}</tbody>
         </table></div>
       </div>
     </div>
@@ -205,8 +226,16 @@ function InventoryReport({ data }) {
         <StatCard icon={Package} label="Out of Stock" value={summary.outOfStock} color="red" />
       </div>
       <div className="card">
-        <div className="table-container"><table className="table"><thead><tr><th>SKU</th><th>Name</th><th>Category</th><th>Stock</th><th>Selling Price</th><th>Total Value</th><th>Status</th></tr></thead>
-          <tbody>{report.map(i => (<tr key={i.id} className={i.isLowStock ? 'bg-red-50' : ''}><td className="font-mono text-xs text-blue-700">{i.sku}</td><td className="font-medium">{i.name}</td><td className="text-gray-500 text-xs">{i.category}</td><td><span className={i.isLowStock ? 'text-red-600 font-bold' : ''}>{i.stockQuantity}</span></td><td>{fmt(i.sellingPrice)}</td><td className="font-semibold text-green-700">{fmt(i.totalValueAtSelling)}</td><td><span className={`badge ${i.status === 'Active' ? 'badge-green' : 'badge-gray'}`}>{i.status}</span></td></tr>))}</tbody>
+        <div className="table-container"><table className="table responsive-table"><thead><tr><th>SKU</th><th>Name</th><th>Category</th><th>Stock</th><th>Selling Price</th><th>Total Value</th><th>Status</th></tr></thead>
+          <tbody>{report.map(i => (<tr key={i.id} className={i.isLowStock ? 'bg-red-50' : ''}>
+            <td data-label="SKU" className="font-mono text-xs text-blue-700">{i.sku}</td>
+            <td data-label="Name" className="font-medium">{i.name}</td>
+            <td data-label="Category" className="text-gray-500 text-xs">{i.category}</td>
+            <td data-label="Stock"><span className={i.isLowStock ? 'text-red-600 font-bold' : ''}>{i.stockQuantity}</span></td>
+            <td data-label="Selling Price">{fmt(i.sellingPrice)}</td>
+            <td data-label="Total Value" className="font-semibold text-green-700">{fmt(i.totalValueAtSelling)}</td>
+            <td data-label="Status"><span className={`badge ${i.status === 'Active' ? 'badge-green' : 'badge-gray'}`}>{i.status}</span></td>
+          </tr>))}</tbody>
         </table></div>
       </div>
     </div>

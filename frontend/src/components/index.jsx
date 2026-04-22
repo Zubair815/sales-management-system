@@ -7,13 +7,13 @@ export function Modal({ open, onClose, title, children, size = '' }) {
   return (
     <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className={`modal ${size === 'lg' ? 'modal-lg' : size === 'xl' ? 'modal-xl' : ''}`}>
-        <div className="flex items-center justify-between p-6 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400">
+        <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-100">
+          <h2 className="text-base md:text-lg font-semibold text-gray-900 truncate pr-2">{title}</h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 flex-shrink-0">
             <X size={18} />
           </button>
         </div>
-        <div className="p-6">{children}</div>
+        <div className="p-4 md:p-6">{children}</div>
       </div>
     </div>
   )
@@ -47,9 +47,9 @@ export function ConfirmDialog({ open, onClose, onConfirm, title, message, danger
 export function Pagination({ page, totalPages, onPageChange }) {
   if (totalPages <= 1) return null
   return (
-    <div className="flex items-center justify-between mt-4">
+    <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-3">
       <p className="text-sm text-gray-500">Page {page} of {totalPages}</p>
-      <div className="flex gap-1">
+      <div className="flex gap-1 flex-wrap justify-center">
         <button onClick={() => onPageChange(page - 1)} disabled={page <= 1} className="btn-secondary btn-sm px-2 py-1.5 disabled:opacity-40">
           <ChevronLeft size={16} />
         </button>
@@ -86,7 +86,7 @@ export function StatusBadge({ status }) {
 // Empty state
 export function EmptyState({ icon: Icon, title, description, action }) {
   return (
-    <div className="text-center py-16">
+    <div className="text-center py-12 md:py-16">
       {Icon && <Icon size={48} className="mx-auto text-gray-300 mb-4" />}
       <h3 className="text-lg font-medium text-gray-900">{title}</h3>
       {description && <p className="text-sm text-gray-500 mt-1">{description}</p>}
@@ -111,12 +111,12 @@ export function LoadingSpinner({ size = 'md' }) {
 // Search input
 export function SearchInput({ value, onChange, placeholder = 'Search...' }) {
   return (
-    <div className="relative">
+    <div className="relative w-full sm:w-64">
       <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
       </svg>
       <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-        className="input pl-9 w-64" />
+        className="input pl-9" />
     </div>
   )
 }
@@ -131,13 +131,13 @@ export function StatCard({ icon: Icon, label, value, sub, color = 'blue' }) {
   return (
     <div className="card">
       <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm text-gray-500">{label}</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-          {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+        <div className="min-w-0 flex-1">
+          <p className="text-xs md:text-sm text-gray-500 truncate">{label}</p>
+          <p className="text-lg md:text-2xl font-bold text-gray-900 mt-1 truncate">{value}</p>
+          {sub && <p className="text-xs text-gray-400 mt-1 truncate">{sub}</p>}
         </div>
-        <div className={`p-3 rounded-xl ${colors[color]}`}>
-          <Icon size={20} />
+        <div className={`p-2 md:p-3 rounded-xl ${colors[color]} flex-shrink-0`}>
+          <Icon size={18} className="md:w-5 md:h-5" />
         </div>
       </div>
     </div>
@@ -170,12 +170,12 @@ export function Select({ value, onChange, options, placeholder = 'Select...', cl
 // Page header
 export function PageHeader({ title, subtitle, actions }) {
   return (
-    <div className="flex items-start justify-between mb-6">
-      <div>
+    <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-4 md:mb-6 gap-3">
+      <div className="min-w-0">
         <h1 className="page-title">{title}</h1>
         {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
       </div>
-      {actions && <div className="flex items-center gap-2">{actions}</div>}
+      {actions && <div className="flex items-center gap-2 flex-wrap flex-shrink-0">{actions}</div>}
     </div>
   )
 }

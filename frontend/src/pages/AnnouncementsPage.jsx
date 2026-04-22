@@ -123,7 +123,7 @@ export default function AnnouncementsPage() {
           <FormField label="Message" required>
             <textarea {...register('message', { required: true })} className="input" rows={4} placeholder="Write your announcement..." />
           </FormField>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Priority">
               <select {...register('priority')} className="input">
                 {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}

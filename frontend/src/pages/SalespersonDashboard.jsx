@@ -22,7 +22,7 @@ export default function SalespersonDashboard() {
       <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-6 text-white">
         <p className="text-green-200 text-sm">Welcome back</p>
         <h2 className="text-2xl font-bold">{user?.name}</h2>
-        <div className="flex gap-4 mt-2 text-sm text-green-100">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-green-100">
           {user?.employeeId && <span>ID: {user.employeeId}</span>}
           {user?.region && <span>Region: {user.region}</span>}
           {user?.jobRole && <span>{user.jobRole}</span>}

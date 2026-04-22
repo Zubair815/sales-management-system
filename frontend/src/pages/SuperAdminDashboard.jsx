@@ -78,14 +78,14 @@ export default function SuperAdminDashboard() {
         ) : (
           <div className="space-y-2">
             {recentLogs.map(log => (
-              <div key={log.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                <div>
+              <div key={log.id} className="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-gray-50 last:border-0 gap-1">
+                <div className="min-w-0">
                   <span className="text-sm font-medium text-gray-800">{log.action}</span>
                   <span className="text-sm text-gray-500 ml-2">on {log.module}</span>
                 </div>
-                <div className="text-right">
+                <div className="sm:text-right flex items-center sm:flex-col gap-2 sm:gap-0 flex-shrink-0">
                   <span className={`badge text-xs ${log.userType === 'SuperAdmin' ? 'badge-purple' : log.userType === 'Admin' ? 'badge-blue' : 'badge-green'}`}>{log.userType}</span>
-                  <p className="text-xs text-gray-400 mt-1">{new Date(log.createdAt).toLocaleString()}</p>
+                  <p className="text-xs text-gray-400 sm:mt-1">{new Date(log.createdAt).toLocaleString()}</p>
                 </div>
               </div>
             ))}

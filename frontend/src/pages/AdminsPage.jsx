@@ -60,10 +60,9 @@ export default function AdminsPage() {
       setDeleteTarget(null); 
       fetchAdmins()
     } catch (error) { 
-      // Extract the specific backend error message
       const errorMessage = error.response?.data?.message || 'Failed to delete admin';
       toast.error(errorMessage);
-      setDeleteTarget(null); // Close the modal even on failure so the user can read the toast
+      setDeleteTarget(null);
     }
   }
 
@@ -90,20 +89,20 @@ export default function AdminsPage() {
           <EmptyState icon={Users} title="No admins found" action={<button onClick={openCreate} className="btn-primary"><Plus size={16} />Create Admin</button>} />
         ) : (
           <div className="table-container">
-            <table className="table">
+            <table className="table responsive-table">
               <thead><tr>
                 <th>Name</th><th>Email</th><th>Phone</th><th>Status</th><th>Last Login</th><th>Actions</th>
               </tr></thead>
               <tbody>
                 {admins.map(admin => (
                   <tr key={admin.id}>
-                    <td className="font-medium text-gray-900">{admin.name}</td>
-                    <td className="text-gray-600">{admin.email}</td>
-                    <td className="text-gray-600">{admin.phone || '-'}</td>
-                    <td><StatusBadge status={admin.status} /></td>
-                    <td className="text-gray-500">{admin.lastLoginAt ? new Date(admin.lastLoginAt).toLocaleDateString() : 'Never'}</td>
-                    <td>
-                      <div className="flex items-center gap-1">
+                    <td data-label="Name" className="font-medium text-gray-900">{admin.name}</td>
+                    <td data-label="Email" className="text-gray-600">{admin.email}</td>
+                    <td data-label="Phone" className="text-gray-600">{admin.phone || '-'}</td>
+                    <td data-label="Status"><StatusBadge status={admin.status} /></td>
+                    <td data-label="Last Login" className="text-gray-500">{admin.lastLoginAt ? new Date(admin.lastLoginAt).toLocaleDateString() : 'Never'}</td>
+                    <td data-label="Actions" data-cell="actions">
+                      <div className="flex flex-wrap items-center gap-1 justify-end md:justify-start">
                         <Link to={`/admins/${admin.id}/permissions`} className="p-1.5 hover:bg-purple-50 hover:text-purple-600 rounded text-gray-400 transition-colors" title="Permissions">
                           <Shield size={15} />
                         </Link>

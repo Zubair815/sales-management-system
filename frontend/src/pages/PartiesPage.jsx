@@ -60,20 +60,20 @@ export function PartiesPage() {
         : data.length === 0 ? <EmptyState icon={Building2} title="No parties found" />
         : (
           <div className="table-container">
-            <table className="table">
+            <table className="table responsive-table">
               <thead><tr><th>Name</th><th>Contact</th><th>Phone</th><th>City</th><th>GST</th><th>Status</th>{canEdit && <th>Actions</th>}</tr></thead>
               <tbody>
                 {data.map(p => (
                   <tr key={p.id}>
-                    <td className="font-medium">{p.name}</td>
-                    <td className="text-gray-500">{p.contactName || '-'}</td>
-                    <td className="text-gray-500">{p.phone}</td>
-                    <td className="text-gray-500">{p.city || '-'}</td>
-                    <td className="font-mono text-xs text-gray-500">{p.gstNumber || '-'}</td>
-                    <td><StatusBadge status={p.status} /></td>
+                    <td data-label="Name" className="font-medium">{p.name}</td>
+                    <td data-label="Contact" className="text-gray-500">{p.contactName || '-'}</td>
+                    <td data-label="Phone" className="text-gray-500">{p.phone}</td>
+                    <td data-label="City" className="text-gray-500">{p.city || '-'}</td>
+                    <td data-label="GST" className="font-mono text-xs text-gray-500">{p.gstNumber || '-'}</td>
+                    <td data-label="Status"><StatusBadge status={p.status} /></td>
                     {canEdit && (
-                      <td>
-                        <div className="flex gap-1">
+                      <td data-label="Actions" data-cell="actions">
+                        <div className="flex flex-wrap gap-1 justify-end md:justify-start">
                           <button onClick={() => openEdit(p)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400"><Edit size={14} /></button>
                           {canCreate && <button onClick={() => toggleStatus(p)} className="p-1.5 hover:bg-yellow-50 hover:text-yellow-600 rounded text-gray-400">{p.status === 'Active' ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}</button>}
                           {canCreate && <button onClick={() => setDeleteTarget(p)} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400"><Trash2 size={14} /></button>}
@@ -91,7 +91,7 @@ export function PartiesPage() {
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editItem ? 'Edit Party' : 'Add Party'} size="lg">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Party Name" required error={errors.name?.message}>
               <input {...register('name', { required: 'Name required' })} className="input" />
             </FormField>

@@ -54,7 +54,6 @@ const deleteSp = async () => {
       setDeleteTarget(null); 
       fetch(); 
     } catch (error) { 
-      // Extract the specific backend error message
       const errorMessage = error.response?.data?.message || 'Failed to delete salesperson';
       toast.error(errorMessage);
       setDeleteTarget(null); 
@@ -77,20 +76,20 @@ const deleteSp = async () => {
         : data.length === 0 ? <EmptyState icon={UserCheck} title="No salespersons found" />
         : (
           <div className="table-container">
-            <table className="table">
+            <table className="table responsive-table">
               <thead><tr><th>Employee ID</th><th>Name</th><th>Phone</th><th>Region</th><th>Role</th><th>Status</th><th>Target</th><th>Actions</th></tr></thead>
               <tbody>
                 {data.map(sp => (
                   <tr key={sp.id}>
-                    <td className="font-mono text-xs text-blue-700 font-semibold">{sp.employeeId}</td>
-                    <td className="font-medium">{sp.name}</td>
-                    <td className="text-gray-500">{sp.phone}</td>
-                    <td className="text-gray-500">{sp.region || '-'}</td>
-                    <td className="text-gray-500 text-xs">{sp.jobRole || '-'}</td>
-                    <td><StatusBadge status={sp.status} /></td>
-                    <td className="text-gray-500">{sp.targetAmount ? `₹${Number(sp.targetAmount).toLocaleString()}` : '-'}</td>
-                    <td>
-                      <div className="flex items-center gap-1">
+                    <td data-label="Employee ID" className="font-mono text-xs text-blue-700 font-semibold">{sp.employeeId}</td>
+                    <td data-label="Name" className="font-medium">{sp.name}</td>
+                    <td data-label="Phone" className="text-gray-500">{sp.phone}</td>
+                    <td data-label="Region" className="text-gray-500">{sp.region || '-'}</td>
+                    <td data-label="Role" className="text-gray-500 text-xs">{sp.jobRole || '-'}</td>
+                    <td data-label="Status"><StatusBadge status={sp.status} /></td>
+                    <td data-label="Target" className="text-gray-500">{sp.targetAmount ? `₹${Number(sp.targetAmount).toLocaleString()}` : '-'}</td>
+                    <td data-label="Actions" data-cell="actions">
+                      <div className="flex flex-wrap items-center gap-1 justify-end md:justify-start">
                         {canEdit && <button onClick={() => openEdit(sp)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400"><Edit size={14} /></button>}
                         {canCreate && <button onClick={() => toggleStatus(sp)} className="p-1.5 hover:bg-yellow-50 hover:text-yellow-600 rounded text-gray-400">{sp.status === 'Active' ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}</button>}
                         {canCreate && <button onClick={() => { setResetTarget(sp); rst2() }} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400"><Key size={14} /></button>}
@@ -108,7 +107,7 @@ const deleteSp = async () => {
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editItem ? 'Edit Salesperson' : 'Add Salesperson'}>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {!editItem && (
               <FormField label="Employee ID" required error={errors.employeeId?.message}>
                 <input {...register('employeeId', { required: true, minLength: 8, maxLength: 12, pattern: /^[a-zA-Z0-9]+$/ })} className="input" placeholder="EMP00001" />

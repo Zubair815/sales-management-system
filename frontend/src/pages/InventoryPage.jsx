@@ -64,25 +64,25 @@ export default function InventoryPage() {
         : data.length === 0 ? <EmptyState icon={Package} title="No items found" />
         : (
           <div className="table-container">
-            <table className="table">
+            <table className="table responsive-table">
               <thead><tr><th>SKU</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th>{canEdit && <th>Actions</th>}</tr></thead>
               <tbody>
                 {data.map(item => (
                   <tr key={item.id}>
-                    <td className="font-mono text-xs text-blue-700 font-semibold">{item.sku}</td>
-                    <td className="font-medium">{item.name}</td>
-                    <td className="text-gray-500 text-xs">{item.category || '-'}</td>
-                    <td className="font-semibold text-green-700">₹{Number(item.sellingPrice).toLocaleString()}</td>
-                    <td>
+                    <td data-label="SKU" className="font-mono text-xs text-blue-700 font-semibold">{item.sku}</td>
+                    <td data-label="Name" className="font-medium">{item.name}</td>
+                    <td data-label="Category" className="text-gray-500 text-xs">{item.category || '-'}</td>
+                    <td data-label="Price" className="font-semibold text-green-700">₹{Number(item.sellingPrice).toLocaleString()}</td>
+                    <td data-label="Stock">
                       <div className="flex items-center gap-1.5">
                         <span className={`font-semibold ${item.stockQuantity <= item.lowStockThreshold ? 'text-red-600' : 'text-gray-800'}`}>{item.stockQuantity}</span>
                         {item.stockQuantity <= item.lowStockThreshold && <AlertTriangle size={14} className="text-red-500" />}
                       </div>
                     </td>
-                    <td><StatusBadge status={item.status} /></td>
+                    <td data-label="Status"><StatusBadge status={item.status} /></td>
                     {canEdit && (
-                      <td>
-                        <div className="flex gap-1">
+                      <td data-label="Actions" data-cell="actions">
+                        <div className="flex flex-wrap gap-1 justify-end md:justify-start">
                           <button onClick={() => openEdit(item)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400"><Edit size={14} /></button>
                           <button onClick={() => { setStockTarget(item); rst2() }} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400" title="Adjust Stock">
                             <PlusCircle size={14} />
@@ -102,7 +102,7 @@ export default function InventoryPage() {
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editItem ? 'Edit Item' : 'Add Inventory Item'} size="lg">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {!editItem && (
               <FormField label="SKU" required error={errors.sku?.message}>
                 <input {...register('sku', { required: 'SKU required' })} className="input" placeholder="PROD-001" />

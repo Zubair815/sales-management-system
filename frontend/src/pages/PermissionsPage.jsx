@@ -90,21 +90,22 @@ export default function PermissionsPage() {
           {MODULES.map(mod => {
             const current = permissions[mod.key] || 'NoAccess'
             return (
-              <div key={mod.key} className="flex items-center gap-4 p-4 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors">
-                <div className="flex-1">
+              <div key={mod.key} className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4 p-4 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors">
+                <div className="flex-1 min-w-0">
                   <p className="font-medium text-gray-800 text-sm">{mod.label}</p>
                   <p className="text-xs text-gray-400 mt-0.5">Current: <span className={`px-1.5 py-0.5 rounded text-xs ${LEVEL_COLORS[current]}`}>{current}</span></p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-1.5 flex-wrap">
                   {LEVELS.map(level => (
                     <button key={level} onClick={() => setPermissions(p => ({ ...p, [mod.key]: level }))}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                      className={`px-2 md:px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
                         current === level
                           ? `${LEVEL_COLORS[level]} border-transparent ring-2 ring-offset-1 ${level === 'NoAccess' ? 'ring-gray-400' : level === 'ViewOnly' ? 'ring-blue-400' : level === 'ViewEdit' ? 'ring-yellow-400' : 'ring-green-400'}`
                           : 'border-gray-200 text-gray-500 hover:border-gray-300'
                       }`}>
                       {level === 'NoAccess' ? <XCircle size={12} className="inline mr-1" /> : <CheckCircle size={12} className="inline mr-1" />}
-                      {level.replace('Access', '').replace('View', 'View ')}
+                      <span className="hidden sm:inline">{level.replace('Access', '').replace('View', 'View ')}</span>
+                      <span className="sm:hidden">{level === 'NoAccess' ? 'No' : level === 'ViewOnly' ? 'View' : level === 'ViewEdit' ? 'Edit' : 'Full'}</span>
                     </button>
                   ))}
                 </div>

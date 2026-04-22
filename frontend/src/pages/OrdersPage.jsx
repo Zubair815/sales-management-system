@@ -96,9 +96,9 @@ export default function OrdersPage() {
         actions={isSp && <button onClick={openCreate} className="btn-primary"><Plus size={16} />New Order</button>} />
 
       <div className="card">
-        <div className="flex flex-wrap gap-3 mb-4">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-3 mb-4">
           <SearchInput value={search} onChange={setSearch} placeholder="Search order #..." />
-          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="input w-40">
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="input w-full sm:w-40">
             {STATUSES.map(s => <option key={s} value={s}>{s || 'All Status'}</option>)}
           </select>
         </div>
@@ -144,7 +144,7 @@ export default function OrdersPage() {
       {/* Create Order Modal */}
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Create New Order" size="xl">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="label">Party <span className="text-red-500">*</span></label>
               <select {...register('partyId', { required: true })} className="input">
@@ -167,21 +167,29 @@ export default function OrdersPage() {
             </div>
             <div className="space-y-2">
               {fields.map((field, idx) => (
-                <div key={field.id} className="grid grid-cols-12 gap-2 items-start">
-                  <div className="col-span-5">
+                <div key={field.id} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-start border-b border-gray-100 pb-3 sm:border-0 sm:pb-0">
+                  <div className="sm:col-span-5">
+                    <label className="label text-xs sm:hidden">Item</label>
                     <select {...register(`items.${idx}.itemId`)} className="input" onChange={e => handleItemChange(idx, e.target.value)}>
                       <option value="">Select Item</option>
                       {inventory.map(i => <option key={i.id} value={i.id}>{i.name} (Stock: {i.stockQuantity})</option>)}
                     </select>
                   </div>
-                  <div className="col-span-2"><input {...register(`items.${idx}.quantity`)} type="number" min="1" className="input" placeholder="Qty" /></div>
-                  <div className="col-span-3"><input {...register(`items.${idx}.unitPrice`)} type="number" step="0.01" className="input" placeholder="Price" /></div>
-                  <div className="col-span-1 flex items-center justify-center h-10">
+                  <div className="sm:col-span-2">
+                    <label className="label text-xs sm:hidden">Quantity</label>
+                    <input {...register(`items.${idx}.quantity`)} type="number" min="1" className="input" placeholder="Qty" />
+                  </div>
+                  <div className="sm:col-span-3">
+                    <label className="label text-xs sm:hidden">Price</label>
+                    <input {...register(`items.${idx}.unitPrice`)} type="number" step="0.01" className="input" placeholder="Price" />
+                  </div>
+                  <div className="sm:col-span-1 flex items-center justify-between sm:justify-center h-10">
+                    <span className="text-xs text-gray-500 sm:hidden">Total:</span>
                     <span className="text-xs text-gray-500 font-semibold">
                       ₹{((parseFloat(watchItems?.[idx]?.unitPrice) || 0) * (parseInt(watchItems?.[idx]?.quantity) || 0)).toLocaleString()}
                     </span>
                   </div>
-                  <div className="col-span-1 flex items-center h-10">
+                  <div className="sm:col-span-1 flex items-center h-10">
                     {fields.length > 1 && <button type="button" onClick={() => remove(idx)} className="p-1 hover:text-red-500 text-gray-300"><Trash2 size={14} /></button>}
                   </div>
                 </div>
@@ -203,7 +211,7 @@ export default function OrdersPage() {
       {viewOrder && (
         <Modal open={!!viewOrder} onClose={() => setViewOrder(null)} title={`Order: ${viewOrder.orderNumber}`} size="lg">
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
               <div><span className="text-gray-500">Party:</span> <span className="font-medium">{viewOrder.party?.name}</span></div>
               <div><span className="text-gray-500">Status:</span> <StatusBadge status={viewOrder.status} /></div>
               <div><span className="text-gray-500">Salesperson:</span> <span className="font-medium">{viewOrder.salesperson?.name}</span></div>
