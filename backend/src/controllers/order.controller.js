@@ -74,13 +74,22 @@ const createOrder = async (req, res) => {
     const salespersonId = req.user.role === 'Salesperson' ? req.user.id : req.body.salespersonId;
     if (!salespersonId) return errorResponse(res, 'Salesperson required', 400);
 
-    // Validate items and calculate total
+    // Validate items and calculate total (Batched Query for Performance)
     let totalAmount = 0;
     const orderItems = [];
+    
+    const itemIds = items.map(i => i.itemId);
+    const invItems = await prisma.inventoryItem.findMany({
+      where: { id: { in: itemIds }, deletedAt: null, status: 'Active' }
+    });
+    
+    const invItemsMap = new Map(invItems.map(i => [i.id, i]));
+
     for (const item of items) {
-      const invItem = await prisma.inventoryItem.findFirst({ where: { id: item.itemId, deletedAt: null, status: 'Active' } });
+      const invItem = invItemsMap.get(item.itemId);
       if (!invItem) return errorResponse(res, `Item ${item.itemId} not found`, 400);
       if (invItem.stockQuantity < item.quantity) return errorResponse(res, `Insufficient stock for ${invItem.name}`, 400);
+      
       const unitPrice = item.unitPrice || parseFloat(invItem.sellingPrice);
       const totalPrice = unitPrice * item.quantity;
       totalAmount += totalPrice;

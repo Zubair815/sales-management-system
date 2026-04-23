@@ -1,29 +1,31 @@
+import React, { Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { SocketProvider } from './contexts/SocketContext'
 
-import LoginPage from './pages/LoginPage'
-import SuperAdminDashboard from './pages/SuperAdminDashboard'
-import AdminDashboard from './pages/AdminDashboard'
-import SalespersonDashboard from './pages/SalespersonDashboard'
-
-import AdminsPage from './pages/AdminsPage'
-import PermissionsPage from './pages/PermissionsPage'
-import SalespersonsPage from './pages/SalespersonsPage'
-import PartiesPage from './pages/PartiesPage'
-import InventoryPage from './pages/InventoryPage'
-import OrdersPage from './pages/OrdersPage'
-import ExpensesPage from './pages/ExpensesPage'
-import PaymentsPage from './pages/PaymentsPage'
-import AnnouncementsPage from './pages/AnnouncementsPage'
-import ReportsPage from './pages/ReportsPage'
-import AuditLogsPage from './pages/AuditLogsPage'
-import SystemConfigPage from './pages/SystemConfigPage'
-import PrintTemplatePage from './pages/PrintTemplatePage'
-
 import MainLayout from './layouts/MainLayout'
 import LoadingSpinner from './components/LoadingSpinner'
+
+// Lazy loaded pages for performance optimization
+const LoginPage = lazy(() => import('./pages/LoginPage'))
+const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard'))
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
+const SalespersonDashboard = lazy(() => import('./pages/SalespersonDashboard'))
+
+const AdminsPage = lazy(() => import('./pages/AdminsPage'))
+const PermissionsPage = lazy(() => import('./pages/PermissionsPage'))
+const SalespersonsPage = lazy(() => import('./pages/SalespersonsPage'))
+const PartiesPage = lazy(() => import('./pages/PartiesPage'))
+const InventoryPage = lazy(() => import('./pages/InventoryPage'))
+const OrdersPage = lazy(() => import('./pages/OrdersPage'))
+const ExpensesPage = lazy(() => import('./pages/ExpensesPage'))
+const PaymentsPage = lazy(() => import('./pages/PaymentsPage'))
+const AnnouncementsPage = lazy(() => import('./pages/AnnouncementsPage'))
+const ReportsPage = lazy(() => import('./pages/ReportsPage'))
+const AuditLogsPage = lazy(() => import('./pages/AuditLogsPage'))
+const SystemConfigPage = lazy(() => import('./pages/SystemConfigPage'))
+const PrintTemplatePage = lazy(() => import('./pages/PrintTemplatePage'))
 
 // ─── Auth Guard Components ──────────────────────────────────
 
@@ -47,7 +49,8 @@ const DashboardRedirect = () => {
 
 function AppRoutes() {
   return (
-    <Routes>
+    <Suspense fallback={<LoadingSpinner fullScreen />}>
+      <Routes>
       {/* Public */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -85,7 +88,8 @@ function AppRoutes() {
 
       {/* Catch-all */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   )
 }
 

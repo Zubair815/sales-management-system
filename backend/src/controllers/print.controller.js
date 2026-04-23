@@ -1,5 +1,6 @@
 const prisma = require('../config/database');
 const { successResponse, errorResponse } = require('../utils/response');
+const cache = require('../utils/cache');
 
 const DEFAULT_TEMPLATES = ['order', 'expense', 'payment'];
 
@@ -12,14 +13,20 @@ const getTemplates = async (req, res) => {
 
 const getTemplate = async (req, res) => {
   try {
-    const template = await prisma.printTemplate.findFirst({ where: { name: req.params.name } });
+    const cacheKey = `print_template_${req.params.name}`;
+    let template = cache.get(cacheKey);
+
     if (!template) {
-      // Return default template config
-      return successResponse(res, {
-        name: req.params.name, companyName: 'Your Company Name',
-        companyAddress: '123 Business Street, City, State', companyPhone: '+1 234 567 8900',
-        companyEmail: 'info@company.com', logoPath: null, footerText: 'Thank you for your business!',
-      });
+      template = await prisma.printTemplate.findFirst({ where: { name: req.params.name } });
+      if (!template) {
+        // Return default template config
+        template = {
+          name: req.params.name, companyName: 'Your Company Name',
+          companyAddress: '123 Business Street, City, State', companyPhone: '+1 234 567 8900',
+          companyEmail: 'info@company.com', logoPath: null, footerText: 'Thank you for your business!',
+        };
+      }
+      cache.set(cacheKey, template, 3600000); // Cache for 1 hour
     }
     return successResponse(res, template);
   } catch (e) { return errorResponse(res, 'Failed to fetch template', 500); }
@@ -33,6 +40,10 @@ const updateTemplate = async (req, res) => {
       update: { companyName, companyAddress, companyPhone, companyEmail, footerText, customCss },
       create: { name: req.params.name, companyName, companyAddress, companyPhone, companyEmail, footerText, customCss },
     });
+    
+    // Invalidate cache
+    cache.del(`print_template_${req.params.name}`);
+    
     return successResponse(res, template, 'Template updated');
   } catch (e) { return errorResponse(res, 'Failed to update template', 500); }
 };

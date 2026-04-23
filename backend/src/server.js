@@ -48,6 +48,28 @@ async function gracefulShutdown(signal) {
   }, 10000);
 }
 
+const https = require('https');
+
 server.listen(PORT, () => {
   logger.info(`Server running on port ${PORT} in ${NODE_ENV} mode`);
+
+  // --- NEW: Self-ping mechanism to mitigate Render cold starts ---
+  // Render spins down free-tier servers after 15 mins of inactivity.
+  // This pings the health endpoint every 14 minutes.
+  if (NODE_ENV === 'production') {
+    const backendUrl = process.env.BACKEND_URL;
+    if (backendUrl) {
+      setInterval(() => {
+        https.get(`${backendUrl}/health`, (res) => {
+          if (res.statusCode === 200) {
+            logger.info('Keep-alive ping successful');
+          }
+        }).on('error', (err) => {
+          logger.error('Keep-alive ping failed:', err.message);
+        });
+      }, 14 * 60 * 1000); // 14 minutes
+    } else {
+      logger.warn('BACKEND_URL not set. Self-ping mechanism disabled.');
+    }
+  }
 });

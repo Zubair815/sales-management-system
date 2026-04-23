@@ -10,4 +10,15 @@ export default defineConfig({
       '/uploads': { target: 'http://localhost:5000', changeOrigin: true },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          ui: ['@headlessui/react', 'lucide-react', 'react-hot-toast'],
+          charts: ['chart.js', 'react-chartjs-2'],
+        },
+      },
+    },
+  },
 })
