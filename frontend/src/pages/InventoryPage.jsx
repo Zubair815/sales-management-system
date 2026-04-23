@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader, FormField, EmptyState } from '../components/index.jsx'
 import { Plus, Edit, Trash2, Package, AlertTriangle, PlusCircle, MinusCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import useDebounce from '../hooks/useDebounce'
 
 export default function InventoryPage() {
   const { hasPermission, user } = useAuth()
@@ -21,15 +22,17 @@ export default function InventoryPage() {
   const { register, handleSubmit, reset, formState: { errors } } = useForm()
   const { register: reg2, handleSubmit: hs2, reset: rst2 } = useForm()
 
+  const debouncedSearch = useDebounce(search, 500)
+
   const fetch = async (page = 1) => {
     setLoading(true)
     try {
-      const r = await api.get('/inventory', { params: { page, limit: 12, search } })
+      const r = await api.get('/inventory', { params: { page, limit: 12, search: debouncedSearch } })
       setData(r.data.data); setPagination(r.data.pagination)
     } catch { toast.error('Failed') } finally { setLoading(false) }
   }
 
-  useEffect(() => { fetch() }, [search])
+  useEffect(() => { fetch() }, [debouncedSearch])
 
   const openCreate = () => { setEditItem(null); reset({}); setModalOpen(true) }
   const openEdit = (item) => { setEditItem(item); reset({ ...item, costPrice: item.costPrice || '', sellingPrice: item.sellingPrice }); setModalOpen(true) }

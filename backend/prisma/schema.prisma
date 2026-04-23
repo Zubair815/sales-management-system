@@ -172,6 +172,8 @@ model Order {
   @@index([partyId])
   @@index([status])
   @@index([createdAt])
+  @@index([deletedAt, status, createdAt])
+  @@index([salespersonId, deletedAt, createdAt])
   @@map("orders")
 }
 
@@ -244,6 +246,8 @@ model Expense {
   @@index([status])
   @@index([expenseDate])
   @@index([submittedAt]) // Added index for faster monthly reporting queries
+  @@index([deletedAt, status, expenseDate])
+  @@index([salespersonId, deletedAt, expenseDate])
   @@map("expenses")
 }
 // ==================== PAYMENTS ====================
@@ -277,6 +281,8 @@ model Payment {
   @@index([partyId])
   @@index([status])
   @@index([paymentDate])
+  @@index([deletedAt, status, paymentDate])
+  @@index([salespersonId, deletedAt, paymentDate])
   @@map("payments")
 }
 

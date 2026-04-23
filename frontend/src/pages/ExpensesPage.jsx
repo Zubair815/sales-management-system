@@ -6,6 +6,7 @@ import { Modal, ConfirmDialog, Pagination, StatusBadge, PageHeader, EmptyState, 
 import { Plus, Eye, Check, X, Receipt, Paperclip, Send, ArrowLeft } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import MonthlyExpensePrintTemplate from '../components/MonthlyExpensePrintTemplate'
+import useDebounce from '../hooks/useDebounce'
 
 export default function ExpensesPage() {
   const { user, hasPermission } = useAuth()
@@ -30,21 +31,23 @@ export default function ExpensesPage() {
   const { register, handleSubmit, reset, formState: { errors } } = useForm()
   const { register: reg2, handleSubmit: hs2, reset: rst2 } = useForm()
 
+  const debouncedSearch = useDebounce(search, 500)
+
   // --- FETCHING LOGIC ---
   const fetchData = async (page = 1) => {
     setLoading(true)
     try {
       if (isSp) {
         // 1. Salesperson View: Fetch their own expenses
-        const r = await api.get('/expenses', { params: { page, limit: 10, status: statusFilter, search } })
+        const r = await api.get('/expenses', { params: { page, limit: 10, status: statusFilter, search: debouncedSearch } })
         setData(r.data.data); setPagination(r.data.pagination)
       } else if (selectedSp) {
         // 2. Admin Detailed View: Fetch specific Salesperson's expenses
-        const r = await api.get('/expenses', { params: { page, limit: 10, salespersonId: selectedSp.id, status: statusFilter, search } })
+        const r = await api.get('/expenses', { params: { page, limit: 10, salespersonId: selectedSp.id, status: statusFilter, search: debouncedSearch } })
         setData(r.data.data); setPagination(r.data.pagination)
       } else {
         // 3. Admin Main Dashboard: Fetch grouped reports
-        const r = await api.get('/expenses/reports/admin', { params: { search } })
+        const r = await api.get('/expenses/reports/admin', { params: { search: debouncedSearch } })
         setAdminReports(r.data.data)
       }
     } catch { 
@@ -54,7 +57,7 @@ export default function ExpensesPage() {
     }
   }
 
-  useEffect(() => { fetchData() }, [statusFilter, search, selectedSp]) 
+  useEffect(() => { fetchData() }, [statusFilter, debouncedSearch, selectedSp]) 
   
   const fetchExpenseTypes = () => { api.get('/expenses/types').then(r => setExpenseTypes(r.data.data)).catch(() => {}) }
   useEffect(() => { fetchExpenseTypes() }, [])

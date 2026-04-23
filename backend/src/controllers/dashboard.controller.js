@@ -1,10 +1,15 @@
 const prisma = require('../config/database');
 const { successResponse, errorResponse } = require('../utils/response');
+const { getCache, setCache } = require('../utils/cache');
 
 // Date helpers moved inside functions to avoid stale module-level values
 
 const getAdminDashboard = async (req, res) => {
   try {
+    const cacheKey = 'admin_dashboard';
+    const cachedData = getCache(cacheKey);
+    if (cachedData) return successResponse(res, cachedData);
+
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfYear = new Date(now.getFullYear(), 0, 1);
@@ -40,7 +45,7 @@ const getAdminDashboard = async (req, res) => {
 
     const lowStock = lowStockItems.filter(i => i.stockQuantity <= i.lowStockThreshold);
 
-    return successResponse(res, {
+    const responseData = {
       orders: { mtd: totalOrdersMTD, ytd: totalOrdersYTD },
       revenue: { mtd: parseFloat(revenueMTD._sum.grandTotal || 0), ytd: parseFloat(revenueYTD._sum.grandTotal || 0) },
       expenses: { mtd: parseFloat(expensesMTD._sum.amount || 0), ytd: parseFloat(expensesYTD._sum.amount || 0) },
@@ -49,15 +54,22 @@ const getAdminDashboard = async (req, res) => {
       pendingApprovals: { orders: pendingOrders, expenses: pendingExpenses, payments: pendingPayments },
       orderTrend, expensesByType, lowStockAlerts: lowStock.slice(0, 10),
       topSalespersons: topSalespersons.map(s => ({ ...s, revenue: parseFloat(s.revenue || 0) })),
-    });
+    };
+
+    setCache(cacheKey, responseData, 300); // cache for 5 mins
+    return successResponse(res, responseData);
   } catch (e) { return errorResponse(res, 'Failed to load dashboard', 500); }
 };
 
 const getSalespersonDashboard = async (req, res) => {
   try {
+    const spId = req.user.id;
+    const cacheKey = `sp_dashboard_${spId}`;
+    const cachedData = getCache(cacheKey);
+    if (cachedData) return successResponse(res, cachedData);
+
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const spId = req.user.id;
     const [ordersMTD, expensesMTD, paymentsMTD, recentOrders, unreadAnnouncements, pendingExpenses, pendingPayments] = await Promise.all([
       prisma.order.aggregate({ where: { salespersonId: spId, deletedAt: null, createdAt: { gte: startOfMonth }, status: { not: 'Cancelled' } }, _sum: { grandTotal: true }, _count: true }),
       prisma.expense.aggregate({ where: { salespersonId: spId, deletedAt: null, expenseDate: { gte: startOfMonth } }, _sum: { amount: true }, _count: true }),
@@ -70,17 +82,24 @@ const getSalespersonDashboard = async (req, res) => {
       prisma.payment.count({ where: { salespersonId: spId, deletedAt: null, status: 'Pending' } }),
     ]);
 
-    return successResponse(res, {
+    const responseData = {
       ordersMTD: { count: ordersMTD._count, revenue: parseFloat(ordersMTD._sum.grandTotal || 0) },
       expensesMTD: { count: expensesMTD._count, amount: parseFloat(expensesMTD._sum.amount || 0) },
       collectionsMTD: parseFloat(paymentsMTD._sum.amount || 0),
       recentOrders, unreadAnnouncements, pendingExpenses, pendingPayments,
-    });
+    };
+
+    setCache(cacheKey, responseData, 300);
+    return successResponse(res, responseData);
   } catch (e) { return errorResponse(res, 'Failed to load dashboard', 500); }
 };
 
 const getSuperAdminDashboard = async (req, res) => {
   try {
+    const cacheKey = 'super_admin_dashboard';
+    const cachedData = getCache(cacheKey);
+    if (cachedData) return successResponse(res, cachedData);
+
     const [totalAdmins, totalSalespersons, totalOrders, totalRevenue, recentAuditLogs] = await Promise.all([
       prisma.admin.count({ where: { deletedAt: null, status: 'Active' } }),
       prisma.salesperson.count({ where: { deletedAt: null, status: 'Active' } }),
@@ -88,7 +107,10 @@ const getSuperAdminDashboard = async (req, res) => {
       prisma.order.aggregate({ where: { deletedAt: null, status: { not: 'Cancelled' } }, _sum: { grandTotal: true } }),
       prisma.auditLog.findMany({ orderBy: { createdAt: 'desc' }, take: 10 }),
     ]);
-    return successResponse(res, { totalAdmins, totalSalespersons, totalOrders, totalRevenue: parseFloat(totalRevenue._sum.grandTotal || 0), recentAuditLogs });
+    
+    const responseData = { totalAdmins, totalSalespersons, totalOrders, totalRevenue: parseFloat(totalRevenue._sum.grandTotal || 0), recentAuditLogs };
+    setCache(cacheKey, responseData, 300);
+    return successResponse(res, responseData);
   } catch (e) { return errorResponse(res, 'Failed to load dashboard', 500); }
 };
 

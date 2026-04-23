@@ -4,6 +4,7 @@ import api from '../services/api'
 import toast from 'react-hot-toast'
 import { Pagination, PageHeader, SearchInput } from '../components/index.jsx'
 import { Activity } from 'lucide-react'
+import useDebounce from '../hooks/useDebounce'
 
 export function AuditLogsPage() {
   const [data, setData] = useState([])
@@ -11,15 +12,17 @@ export function AuditLogsPage() {
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState({ module: '', userType: '' })
 
+  const debouncedModule = useDebounce(filters.module, 500)
+
   const fetch = async (page = 1) => {
     setLoading(true)
     try {
-      const r = await api.get('/audit', { params: { page, limit: 50, ...filters } })
+      const r = await api.get('/audit', { params: { page, limit: 50, ...filters, module: debouncedModule } })
       setData(r.data.data); setPagination(r.data.pagination)
     } catch { toast.error('Failed') } finally { setLoading(false) }
   }
 
-  useEffect(() => { fetch() }, [filters])
+  useEffect(() => { fetch() }, [debouncedModule, filters.userType])
 
   const typeColors = { SuperAdmin: 'bg-purple-100 text-purple-700', Admin: 'bg-blue-100 text-blue-700', Salesperson: 'bg-green-100 text-green-700' }
 

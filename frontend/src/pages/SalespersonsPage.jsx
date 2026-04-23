@@ -6,6 +6,7 @@ import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader,
 import { Plus, Edit, Trash2, ToggleLeft, ToggleRight, Key, UserCheck } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { formatPhone } from '../utils/formatPhone'
+import useDebounce from '../hooks/useDebounce'
 
 export default function SalespersonsPage() {
   const { hasPermission } = useAuth()
@@ -22,15 +23,17 @@ export default function SalespersonsPage() {
   const { register, handleSubmit, reset, formState: { errors } } = useForm()
   const { register: reg2, handleSubmit: hs2, reset: rst2, formState: { errors: err2 } } = useForm()
 
+  const debouncedSearch = useDebounce(search, 500)
+
   const fetch = async (page = 1) => {
     setLoading(true)
     try {
-      const r = await api.get('/salespersons', { params: { page, limit: 10, search } })
+      const r = await api.get('/salespersons', { params: { page, limit: 10, search: debouncedSearch } })
       setData(r.data.data); setPagination(r.data.pagination)
     } catch { toast.error('Failed to load') } finally { setLoading(false) }
   }
 
-  useEffect(() => { fetch() }, [search])
+  useEffect(() => { fetch() }, [debouncedSearch])
 
   const openCreate = () => { setEditItem(null); reset({}); setModalOpen(true) }
   const openEdit = (sp) => { setEditItem(sp); reset({ name: sp.name, email: sp.email, phone: sp.phone, region: sp.region, jobRole: sp.jobRole, targetAmount: sp.targetAmount, budgetAmount: sp.budgetAmount }); setModalOpen(true) }

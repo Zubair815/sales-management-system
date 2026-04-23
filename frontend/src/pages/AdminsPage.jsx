@@ -4,8 +4,9 @@ import api from '../services/api'
 import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
 import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader, FormField, EmptyState } from '../components/index.jsx'
-import { Plus, Edit, Trash2, Shield, ToggleLeft, ToggleRight, Key, Users } from 'lucide-react'
+import { Shield, ToggleLeft, ToggleRight, Key, Users, Plus, Edit, Trash2 } from 'lucide-react'
 import { formatPhone } from '../utils/formatPhone'
+import useDebounce from '../hooks/useDebounce'
 
 export default function AdminsPage() {
   const [admins, setAdmins] = useState([])
@@ -19,17 +20,19 @@ export default function AdminsPage() {
   const { register, handleSubmit, reset, formState: { errors } } = useForm()
   const { register: reg2, handleSubmit: hs2, reset: rst2, formState: { errors: err2 } } = useForm()
 
+  const debouncedSearch = useDebounce(search, 500)
+
   const fetchAdmins = async (page = 1) => {
     setLoading(true)
     try {
-      const r = await api.get('/super-admin/admins', { params: { page, limit: 10, search } })
+      const r = await api.get('/super-admin/admins', { params: { page, limit: 10, search: debouncedSearch } })
       setAdmins(r.data.data)
       setPagination(r.data.pagination)
     } catch { toast.error('Failed to load admins') }
     finally { setLoading(false) }
   }
 
-  useEffect(() => { fetchAdmins() }, [search])
+  useEffect(() => { fetchAdmins() }, [debouncedSearch])
 
   const openCreate = () => { setEditAdmin(null); reset({}); setModalOpen(true) }
   const openEdit = (admin) => { setEditAdmin(admin); reset({ name: admin.name, email: admin.email, phone: admin.phone }); setModalOpen(true) }

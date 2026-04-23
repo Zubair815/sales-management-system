@@ -6,6 +6,7 @@ import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader,
 import { Plus, Eye, Check, Truck, CheckCircle, XCircle, Printer, ShoppingCart, Trash2, Send } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import OrderPrintTemplate from '../components/OrderPrintTemplate.jsx'
+import useDebounce from '../hooks/useDebounce'
 
 export default function OrdersPage() {
   const { user, hasPermission } = useAuth()
@@ -24,25 +25,29 @@ export default function OrdersPage() {
   const [inventory, setInventory] = useState([])
   const { register, handleSubmit, control, reset, watch, setValue, formState: { errors } } = useForm({ defaultValues: { items: [{ itemId: '', quantity: 1, unitPrice: 0 }] } })
   const { fields, append, remove } = useFieldArray({ control, name: 'items' })
+  
+  const debouncedSearch = useDebounce(search, 500)
 
   const fetch = async (page = 1) => {
     setLoading(true)
     try {
-      const r = await api.get('/orders', { params: { page, limit: 10, search, status: statusFilter } })
+      const r = await api.get('/orders', { params: { page, limit: 10, search: debouncedSearch, status: statusFilter } })
       setData(r.data.data); setPagination(r.data.pagination)
     } catch { toast.error('Failed') } finally { setLoading(false) }
   }
 
-  useEffect(() => { fetch() }, [search, statusFilter])
+  useEffect(() => { fetch() }, [debouncedSearch, statusFilter])
 
-  useEffect(() => {
-    Promise.all([
-      api.get('/parties', { params: { limit: 100, status: 'Active' } }),
-      api.get('/inventory', { params: { limit: 100, status: 'Active' } }),
-    ]).then(([p, i]) => { setParties(p.data.data); setInventory(i.data.data) }).catch(() => {})
-  }, [])
-
-  const openCreate = () => { reset({ items: [{ itemId: '', quantity: 1, unitPrice: 0 }] }); setModalOpen(true) }
+  const openCreate = () => { 
+    reset({ items: [{ itemId: '', quantity: 1, unitPrice: 0 }] })
+    setModalOpen(true)
+    if (parties.length === 0 || inventory.length === 0) {
+      Promise.all([
+        api.get('/parties', { params: { limit: 500, status: 'Active' } }),
+        api.get('/inventory', { params: { limit: 500, status: 'Active' } }),
+      ]).then(([p, i]) => { setParties(p.data.data); setInventory(i.data.data) }).catch(() => {})
+    }
+  }
 
   const onSubmit = async (d) => {
     try {

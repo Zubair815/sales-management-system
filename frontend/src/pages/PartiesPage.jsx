@@ -7,6 +7,7 @@ import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader,
 import { Plus, Edit, Trash2, ToggleRight, ToggleLeft, Building2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { formatPhone } from '../utils/formatPhone'
+import useDebounce from '../hooks/useDebounce'
 
 export function PartiesPage() {
   const { hasPermission } = useAuth()
@@ -21,15 +22,17 @@ export function PartiesPage() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const { register, handleSubmit, reset, formState: { errors } } = useForm()
 
+  const debouncedSearch = useDebounce(search, 500)
+
   const fetch = async (page = 1) => {
     setLoading(true)
     try {
-      const r = await api.get('/parties', { params: { page, limit: 10, search } })
+      const r = await api.get('/parties', { params: { page, limit: 10, search: debouncedSearch } })
       setData(r.data.data); setPagination(r.data.pagination)
     } catch { toast.error('Failed') } finally { setLoading(false) }
   }
 
-  useEffect(() => { fetch() }, [search])
+  useEffect(() => { fetch() }, [debouncedSearch])
 
   const openCreate = () => { setEditItem(null); reset({}); setModalOpen(true) }
   const openEdit = (item) => { setEditItem(item); reset(item); setModalOpen(true) }

@@ -6,6 +6,7 @@ import { Modal, Pagination, StatusBadge, PageHeader, EmptyState, FormField, Sear
 import { Plus, Eye, Check, X, CreditCard, Printer } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import PaymentPrintTemplate from '../components/PaymentPrintTemplate.jsx'
+import useDebounce from '../hooks/useDebounce'
 
 export default function PaymentsPage() {
   const { user, hasPermission } = useAuth()
@@ -25,15 +26,17 @@ export default function PaymentsPage() {
   const { register, handleSubmit, reset } = useForm()
   const { register: reg2, handleSubmit: hs2, reset: rst2 } = useForm()
 
-const fetch = async (page = 1) => {
+  const debouncedSearch = useDebounce(search, 500)
+
+  const fetch = async (page = 1) => {
     setLoading(true)
     try {
-      const r = await api.get('/payments', { params: { page, limit: 10, status: statusFilter, search } })
+      const r = await api.get('/payments', { params: { page, limit: 10, status: statusFilter, search: debouncedSearch } })
       setData(r.data.data); setPagination(r.data.pagination)
     } catch { toast.error('Failed') } finally { setLoading(false) }
   }
 
-  useEffect(() => { fetch() }, [statusFilter, search])
+  useEffect(() => { fetch() }, [statusFilter, debouncedSearch])
 
   useEffect(() => {
     if (isSp) {

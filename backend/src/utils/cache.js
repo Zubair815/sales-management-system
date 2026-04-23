@@ -1,32 +1,29 @@
-// Simple in-memory LRU-style cache to reduce DB load
-class Cache {
-  constructor() {
-    this.store = new Map();
-  }
+const NodeCache = require('node-cache');
+const logger = require('./logger');
 
-  // ttlMs defaults to 5 minutes
-  set(key, value, ttlMs = 300000) {
-    const expiresAt = Date.now() + ttlMs;
-    this.store.set(key, { value, expiresAt });
-  }
+// Cache with default 300s (5m) TTL
+const cache = new NodeCache({ stdTTL: 300, checkperiod: 60 });
 
-  get(key) {
-    const item = this.store.get(key);
-    if (!item) return null;
-    if (Date.now() > item.expiresAt) {
-      this.store.delete(key);
-      return null;
-    }
-    return item.value;
-  }
+const getCache = (key) => {
+  const value = cache.get(key);
+  if (value) logger.debug(`Cache hit for key: ${key}`);
+  return value;
+};
 
-  del(key) {
-    this.store.delete(key);
-  }
+const setCache = (key, value, ttl = 300) => {
+  cache.set(key, value, ttl);
+  logger.debug(`Cache set for key: ${key}`);
+};
 
-  clear() {
-    this.store.clear();
-  }
-}
+const clearCache = (keyPattern) => {
+  const keys = cache.keys();
+  const toDelete = keys.filter(k => k.includes(keyPattern));
+  cache.del(toDelete);
+  logger.debug(`Cache cleared for pattern: ${keyPattern}`);
+};
 
-module.exports = new Cache();
+module.exports = {
+  getCache,
+  setCache,
+  clearCache,
+};
