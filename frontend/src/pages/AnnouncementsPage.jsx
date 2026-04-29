@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import api from '../services/api'
 import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
-import { Modal, ConfirmDialog, Pagination, StatusBadge, PageHeader, EmptyState, FormField } from '../components/index.jsx'
+import { Modal, ConfirmDialog, Pagination, StatusBadge, PageHeader, EmptyState, FormField, LoadingSpinner } from '../components/index.jsx'
 import { Plus, Send, Bell, Eye, Trash2, Users, Megaphone } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -25,7 +25,7 @@ function useAnnouncementsData(isSp) {
         const r = await api.get('/announcements/admin', { params: { page, limit: 10 } })
         setData(r.data.data); setPagination(r.data.pagination)
       }
-    } catch { toast.error('Failed') } finally { setLoading(false) }
+    } catch { toast.error('Failed to load announcements. Please refresh.') } finally { setLoading(false) }
   }, [isSp])
 
   useEffect(() => { refetch() }, [refetch])
@@ -73,7 +73,7 @@ export default function AnnouncementsPage() {
 
   const deleteAnn = async (id) => {
     try { await api.delete(`/announcements/${id}`); toast.success('Deleted'); fetch() }
-    catch { toast.error('Failed') }
+    catch { toast.error('Failed to delete announcement.') }
   }
 
   // FIX: M-8 — client-side file size validation
@@ -98,7 +98,7 @@ export default function AnnouncementsPage() {
       />
 
       <div className="space-y-3">
-        {loading ? <div className="flex justify-center py-12 bg-white rounded-xl"><div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" /></div>
+        {loading ? <LoadingSpinner />
         : data.length === 0 ? (
           <div className="card"><EmptyState icon={Megaphone} title="No announcements" /></div>
         ) : (
@@ -139,10 +139,10 @@ export default function AnnouncementsPage() {
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Create Announcement" size="lg">
         <form onSubmit={handleSubmit(onCreate)} className="space-y-4">
           <FormField label="Title" required>
-            <input {...register('title', { required: true })} className="input" placeholder="Announcement title" />
+            <input {...register('title', { required: 'Title is required' })} className="input" placeholder="Announcement title" />
           </FormField>
           <FormField label="Message" required>
-            <textarea {...register('message', { required: true })} className="input" rows={4} placeholder="Write your announcement..." />
+            <textarea {...register('message', { required: 'Message is required' })} className="input" rows={4} placeholder="Write your announcement..." />
           </FormField>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Priority">

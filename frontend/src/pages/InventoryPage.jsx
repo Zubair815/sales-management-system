@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import api from '../services/api'
 import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
-import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader, FormField, EmptyState } from '../components/index.jsx'
+import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader, FormField, EmptyState, LoadingSpinner } from '../components/index.jsx'
 import { Plus, Edit, Trash2, Package, AlertTriangle, PlusCircle, MinusCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import useDebounce from '../hooks/useDebounce'
@@ -29,7 +29,7 @@ export default function InventoryPage() {
     try {
       const r = await api.get('/inventory', { params: { page, limit: 12, search: debouncedSearch } })
       setData(r.data.data); setPagination(r.data.pagination)
-    } catch { toast.error('Failed') } finally { setLoading(false) }
+    } catch { toast.error('Failed to load inventory. Please refresh.') } finally { setLoading(false) }
   }
 
   useEffect(() => { fetch() }, [debouncedSearch])
@@ -46,7 +46,7 @@ export default function InventoryPage() {
   }
 
   const deleteItem = async () => {
-    try { await api.delete(`/inventory/${deleteTarget.id}`); toast.success('Deleted'); setDeleteTarget(null); fetch() } catch { toast.error('Failed') }
+    try { await api.delete(`/inventory/${deleteTarget.id}`); toast.success('Deleted'); setDeleteTarget(null); fetch() } catch { toast.error('Failed to delete item.') }
   }
 
   const adjustStock = async (d) => {
@@ -63,7 +63,7 @@ export default function InventoryPage() {
 
       <div className="card">
         <div className="mb-4"><SearchInput value={search} onChange={setSearch} placeholder="Search by name, SKU..." /></div>
-        {loading ? <div className="flex justify-center py-12"><div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" /></div>
+        {loading ? <LoadingSpinner />
         : data.length === 0 ? <EmptyState icon={Package} title="No items found" />
         : (
           <div className="table-container">
@@ -86,11 +86,11 @@ export default function InventoryPage() {
                     {canEdit && (
                       <td data-label="Actions" data-cell="actions">
                         <div className="flex flex-wrap gap-1 justify-end md:justify-start">
-                          <button onClick={() => openEdit(item)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400"><Edit size={14} /></button>
-                          <button onClick={() => { setStockTarget(item); rst2() }} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400" title="Adjust Stock">
+                          <button onClick={() => openEdit(item)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400" aria-label="Edit item"><Edit size={14} /></button>
+                          <button onClick={() => { setStockTarget(item); rst2() }} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400" title="Adjust Stock" aria-label="Adjust stock">
                             <PlusCircle size={14} />
                           </button>
-                          {canCreate && <button onClick={() => setDeleteTarget(item)} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400"><Trash2 size={14} /></button>}
+                          {canCreate && <button onClick={() => setDeleteTarget(item)} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400" aria-label="Delete item"><Trash2 size={14} /></button>}
                         </div>
                       </td>
                     )}
@@ -137,7 +137,7 @@ export default function InventoryPage() {
         <form onSubmit={hs2(adjustStock)} className="space-y-4">
           <p className="text-sm text-gray-500">Current stock: <span className="font-semibold text-gray-800">{stockTarget?.stockQuantity}</span></p>
           <FormField label="Adjustment (use negative to reduce)">
-            <input {...reg2('adjustment', { required: true })} type="number" className="input" placeholder="+50 or -10" />
+            <input {...reg2('adjustment', { required: 'Adjustment value is required' })} type="number" className="input" placeholder="+50 or -10" />
           </FormField>
           <FormField label="Reason"><input {...reg2('reason')} className="input" placeholder="Stock received, damaged..." /></FormField>
           <div className="flex justify-end gap-3">

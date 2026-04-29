@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import api from '../services/api'
 import toast from 'react-hot-toast'
-import { PageHeader } from '../components/index.jsx'
+import { PageHeader, LoadingSpinner } from '../components/index.jsx'
 import { Save, ArrowLeft, CheckCircle, XCircle } from 'lucide-react'
 
 const MODULES = [
@@ -41,7 +41,7 @@ export default function PermissionsPage() {
     ]).then(([adminRes, permRes]) => {
       setAdmin(adminRes.data.data)
       setPermissions(permRes.data.data.permissions)
-    }).catch(() => toast.error('Failed to load')).finally(() => setLoading(false))
+    }).catch(() => toast.error('Failed to load permissions.')).finally(() => setLoading(false))
   }, [id])
 
   const setAll = (level) => {
@@ -55,11 +55,11 @@ export default function PermissionsPage() {
     try {
       await api.put(`/super-admin/admins/${id}/permissions`, { permissions })
       toast.success('Permissions saved!')
-    } catch { toast.error('Failed to save') }
+    } catch { toast.error('Failed to save permissions.') }
     finally { setSaving(false) }
   }
 
-  if (loading) return <div className="flex justify-center py-16"><div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" /></div>
+  if (loading) return <LoadingSpinner />
 
   return (
     <div>

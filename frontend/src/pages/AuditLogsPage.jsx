@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import api from '../services/api'
 import toast from 'react-hot-toast'
-import { Pagination, PageHeader, SearchInput } from '../components/index.jsx'
+import { Pagination, PageHeader, SearchInput, EmptyState, LoadingSpinner } from '../components/index.jsx'
 import { Activity } from 'lucide-react'
 import useDebounce from '../hooks/useDebounce'
 
@@ -19,7 +19,7 @@ export function AuditLogsPage() {
     try {
       const r = await api.get('/audit', { params: { page, limit: 50, ...filters, module: debouncedModule } })
       setData(r.data.data); setPagination(r.data.pagination)
-    } catch { toast.error('Failed') } finally { setLoading(false) }
+    } catch { toast.error('Failed to load audit logs. Please refresh.') } finally { setLoading(false) }
   }
 
   useEffect(() => { fetch() }, [debouncedModule, filters.userType])
@@ -39,7 +39,8 @@ export function AuditLogsPage() {
           </select>
           <input value={filters.module} onChange={e => setFilters(f => ({ ...f, module: e.target.value }))} placeholder="Filter by module" className="input w-full sm:w-40" />
         </div>
-        {loading ? <div className="flex justify-center py-12"><div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" /></div>
+        {loading ? <LoadingSpinner />
+        : data.length === 0 ? <EmptyState icon={Activity} title="No audit logs found" description="Try adjusting your filters." />
         : (
           <div className="table-container">
             <table className="table responsive-table">

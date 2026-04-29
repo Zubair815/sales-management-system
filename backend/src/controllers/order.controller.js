@@ -215,10 +215,26 @@ const deliverOrder = async (req, res) => {
 
 const cancelOrder = async (req, res) => {
   try {
-    const allowedRoles = ['SuperAdmin', 'Admin'];
-    // Salespersons can cancel prepared/pending. Admins can cancel approved ones too.
+    const order = await prisma.order.findFirst({ where: { id: req.params.id, deletedAt: null } });
+    if (!order) return errorResponse(res, 'Order not found', 404);
+
+    // Security: Salesperson can only cancel their own orders
+    if (req.user.role === 'Salesperson' && order.salespersonId !== req.user.id) {
+      return errorResponse(res, 'Unauthorized: You can only cancel your own orders', 403);
+    }
+
     const allowedStatuses = req.user.role === 'Salesperson' ? ['Prepared', 'Pending'] : ['Prepared', 'Pending', 'Approved'];
-    return await changeOrderStatus(req, res, 'Cancelled', allowedStatuses);
+    if (!allowedStatuses.includes(order.status)) {
+      return errorResponse(res, `Cannot cancel order with status: ${order.status}`, 400);
+    }
+
+    const updated = await prisma.order.update({ where: { id: req.params.id }, data: { status: 'Cancelled' } });
+
+    const io = req.app.get('io');
+    if (io) io.to(`salesperson_${order.salespersonId}`).emit('order_status_update', { orderId: order.id, orderNumber: order.orderNumber, status: 'Cancelled' });
+
+    await createAuditLog({ userId: req.user.id, userType: req.user.role, action: 'ORDER_CANCELLED', module: 'OrderManagement', recordId: order.id, oldValues: { status: order.status }, newValues: { status: 'Cancelled' }, ipAddress: req.ip });
+    return successResponse(res, updated, 'Order Cancelled');
   } catch (e) { return errorResponse(res, 'Failed to cancel order', 500); }
 };
 

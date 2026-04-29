@@ -100,6 +100,7 @@ export default function LoginPage() {
                   minLength: { value: 8, message: 'Min 8 characters' },
                 })} type={showPassword ? 'text' : 'password'} className="input pr-10" placeholder="••••••••" />
                 <button type="button" onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>

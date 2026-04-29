@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import api from '../services/api'
 import toast from 'react-hot-toast'
 import { useForm, useFieldArray } from 'react-hook-form'
-import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader, EmptyState } from '../components/index.jsx'
+import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader, EmptyState, LoadingSpinner } from '../components/index.jsx'
 import { Plus, Eye, Check, Truck, CheckCircle, XCircle, Printer, ShoppingCart, Trash2, Send } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import OrderPrintTemplate from '../components/OrderPrintTemplate.jsx'
@@ -33,7 +33,7 @@ export default function OrdersPage() {
     try {
       const r = await api.get('/orders', { params: { page, limit: 10, search: debouncedSearch, status: statusFilter } })
       setData(r.data.data); setPagination(r.data.pagination)
-    } catch { toast.error('Failed') } finally { setLoading(false) }
+    } catch { toast.error('Failed to load orders. Please refresh.') } finally { setLoading(false) }
   }
 
   useEffect(() => { fetch() }, [debouncedSearch, statusFilter])
@@ -45,7 +45,7 @@ export default function OrdersPage() {
       Promise.all([
         api.get('/parties', { params: { limit: 500, status: 'Active' } }),
         api.get('/inventory', { params: { limit: 500, status: 'Active' } }),
-      ]).then(([p, i]) => { setParties(p.data.data); setInventory(i.data.data) }).catch(() => {})
+      ]).then(([p, i]) => { setParties(p.data.data); setInventory(i.data.data) }).catch(() => toast.error('Failed to load parties or inventory.'))
     }
   }
 
@@ -108,7 +108,7 @@ export default function OrdersPage() {
           </select>
         </div>
 
-        {loading ? <div className="flex justify-center py-12"><div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" /></div>
+        {loading ? <LoadingSpinner />
         : data.length === 0 ? <EmptyState icon={ShoppingCart} title="No orders found" action={isSp && <button onClick={openCreate} className="btn-primary"><Plus size={16} />Create Order</button>} />
         : (
           <div className="table-container">
@@ -125,16 +125,16 @@ export default function OrdersPage() {
                     <td data-label="Date" className="text-gray-500 text-xs">{new Date(o.createdAt).toLocaleDateString()}</td>
                     <td data-label="Actions" data-cell="actions">
                       <div className="flex flex-wrap items-center justify-end gap-1 md:justify-start">
-                        <button onClick={() => setViewOrder(o)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400" title="View"><Eye size={14} /></button>
-                        <button onClick={() => openPrint(o.id)} className="p-1.5 hover:bg-gray-50 hover:text-gray-700 rounded text-gray-400" title="Print"><Printer size={14} /></button>
+                        <button onClick={() => setViewOrder(o)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400" title="View" aria-label="View order"><Eye size={14} /></button>
+                        <button onClick={() => openPrint(o.id)} className="p-1.5 hover:bg-gray-50 hover:text-gray-700 rounded text-gray-400" title="Print" aria-label="Print order"><Printer size={14} /></button>
                         
                         {/* New Submit Button for Salesperson */}
-                        {isSp && o.status === 'Prepared' && <button onClick={() => handleSubmitOrder(o.id)} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400" title="Submit to Admin"><Send size={14} /></button>}
+                        {isSp && o.status === 'Prepared' && <button onClick={() => handleSubmitOrder(o.id)} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400" title="Submit to Admin" aria-label="Submit order to admin"><Send size={14} /></button>}
 
-                        {canApprove && o.status === 'Pending' && <button onClick={() => statusAction(o.id, 'approve')} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400" title="Approve"><Check size={14} /></button>}
-                        {canApprove && o.status === 'Approved' && <button onClick={() => statusAction(o.id, 'dispatch')} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400" title="Dispatch"><Truck size={14} /></button>}
-                        {canApprove && o.status === 'Dispatched' && <button onClick={() => statusAction(o.id, 'deliver')} className="p-1.5 hover:bg-purple-50 hover:text-purple-600 rounded text-gray-400" title="Deliver"><CheckCircle size={14} /></button>}
-                        {(o.status === 'Pending' || o.status === 'Prepared' || (canApprove && o.status === 'Approved')) && <button onClick={() => setCancelTarget(o)} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400" title="Cancel"><XCircle size={14} /></button>}
+                        {canApprove && o.status === 'Pending' && <button onClick={() => statusAction(o.id, 'approve')} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400" title="Approve" aria-label="Approve order"><Check size={14} /></button>}
+                        {canApprove && o.status === 'Approved' && <button onClick={() => statusAction(o.id, 'dispatch')} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400" title="Dispatch" aria-label="Dispatch order"><Truck size={14} /></button>}
+                        {canApprove && o.status === 'Dispatched' && <button onClick={() => statusAction(o.id, 'deliver')} className="p-1.5 hover:bg-purple-50 hover:text-purple-600 rounded text-gray-400" title="Deliver" aria-label="Mark order delivered"><CheckCircle size={14} /></button>}
+                        {(o.status === 'Pending' || o.status === 'Prepared' || (canApprove && o.status === 'Approved')) && <button onClick={() => setCancelTarget(o)} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400" title="Cancel" aria-label="Cancel order"><XCircle size={14} /></button>}
                       </div>
                     </td>
                   </tr>
@@ -152,7 +152,7 @@ export default function OrdersPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="label">Party <span className="text-red-500">*</span></label>
-              <select {...register('partyId', { required: true })} className="input">
+              <select {...register('partyId', { required: 'Please select a party' })} className="input">
                 <option value="">Select Party</option>
                 {parties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>

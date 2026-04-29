@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import api from '../services/api'
 import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
-import { Modal, ConfirmDialog, Pagination, StatusBadge, PageHeader, EmptyState, FormField, SearchInput } from '../components/index.jsx'
+import { Modal, ConfirmDialog, Pagination, StatusBadge, PageHeader, EmptyState, FormField, SearchInput, LoadingSpinner } from '../components/index.jsx'
 import { Plus, Eye, Check, X, Receipt, Paperclip, Send, ArrowLeft } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import MonthlyExpensePrintTemplate from '../components/MonthlyExpensePrintTemplate'
@@ -27,6 +27,8 @@ export default function ExpensesPage() {
   const [expenseTypes, setExpenseTypes] = useState([])
   const [typeModalOpen, setTypeModalOpen] = useState(false)
   const [printData, setPrintData] = useState(null)
+  const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false)
+  const [bulkApproveConfirmOpen, setBulkApproveConfirmOpen] = useState(false)
   
   const { register, handleSubmit, reset, formState: { errors } } = useForm()
   const { register: reg2, handleSubmit: hs2, reset: rst2 } = useForm()
@@ -59,7 +61,7 @@ export default function ExpensesPage() {
 
   useEffect(() => { fetchData() }, [statusFilter, debouncedSearch, selectedSp]) 
   
-  const fetchExpenseTypes = () => { api.get('/expenses/types').then(r => setExpenseTypes(r.data.data)).catch(() => {}) }
+  const fetchExpenseTypes = () => { api.get('/expenses/types').then(r => setExpenseTypes(r.data.data)).catch(() => toast.error('Failed to load expense types.')) }
   useEffect(() => { fetchExpenseTypes() }, [])
 
   // --- ACTIONS ---
@@ -74,12 +76,12 @@ export default function ExpensesPage() {
   }
 
   const submitMonthlyReport = async () => {
-    if (!window.confirm('Submit all draft expenses to Admin? You cannot edit them after.')) return;
+    setSubmitConfirmOpen(false);
     setLoading(true);
     try {
       await api.post('/expenses/submit-batch');
       toast.success('Monthly expenses submitted!'); fetchData(); 
-    } catch (error) { toast.error(error.response?.data?.message || 'Failed'); } finally { setLoading(false); }
+    } catch (error) { toast.error(error.response?.data?.message || 'Failed to submit expenses.'); } finally { setLoading(false); }
   };
 
   const handlePrintReport = async () => {
@@ -130,16 +132,14 @@ export default function ExpensesPage() {
 
   // --- NEW: Bulk Approve Function ---
   const handleBulkApprove = async () => {
-    if (!window.confirm(`Are you sure you want to approve ALL pending expenses for ${selectedSp.name}?`)) {
-      return;
-    }
+    setBulkApproveConfirmOpen(false);
     setLoading(true);
     try {
       const res = await api.post('/expenses/bulk-approve', { salespersonId: selectedSp.id });
       toast.success(res.data.message || 'All pending expenses approved!');
       fetchData(); 
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to bulk approve');
+      toast.error(error.response?.data?.message || 'Failed to bulk approve expenses.');
     } finally {
       setLoading(false);
     }
@@ -148,7 +148,7 @@ export default function ExpensesPage() {
   const toggleTypeStatus = async (type) => {
     const newStatus = type.status === 'Active' ? 'Inactive' : 'Active';
     try { await api.put(`/expenses/types/${type.id}`, { status: newStatus }); toast.success(`Marked as ${newStatus}`); fetchExpenseTypes(); } 
-    catch { toast.error('Failed to update status'); }
+    catch { toast.error('Failed to update expense type status.'); }
   };
 
   const createType = async (d) => {
@@ -179,7 +179,7 @@ export default function ExpensesPage() {
             {/* NEW: Bulk Approve Button */}
             {!isSp && selectedSp && canApprove && data.some(e => e.status === 'Pending') && (
               <button 
-                onClick={handleBulkApprove} 
+                onClick={() => setBulkApproveConfirmOpen(true)} 
                 className="btn-secondary bg-green-600 hover:bg-green-700 text-white flex items-center gap-1"
                 disabled={loading}
               >
@@ -201,7 +201,7 @@ export default function ExpensesPage() {
             
             {/* SP Only Tools */}
             {isSp && (
-              <button onClick={submitMonthlyReport} className="btn-secondary bg-green-600 hover:bg-green-700 text-white flex items-center gap-1">
+              <button onClick={() => setSubmitConfirmOpen(true)} className="btn-secondary bg-green-600 hover:bg-green-700 text-white flex items-center gap-1">
                 <Send size={16} /> Submit Monthly Report
               </button>
             )}
@@ -228,7 +228,7 @@ export default function ExpensesPage() {
           )}
         </div>
 
-        {loading ? <div className="flex justify-center py-12"><div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" /></div>
+        {loading ? <LoadingSpinner />
         : !showDetailView ? (
           /* ========================================= */
           /* ADMIN DASHBOARD VIEW (Grouped by SP)      */
@@ -283,11 +283,11 @@ export default function ExpensesPage() {
                     <td data-label="Proof">{e.proofFilePath ? <a href={e.proofFilePath} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-blue-600 hover:underline text-xs"><Paperclip size={12} />View</a> : <span className="text-gray-300 text-xs">None</span>}</td>
                     <td data-label="Actions" data-cell="actions">
                       <div className="flex flex-wrap justify-end gap-1 md:justify-start">
-                        <button onClick={() => setViewItem(e)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400"><Eye size={14} /></button>
+                        <button onClick={() => setViewItem(e)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400" aria-label="View expense"><Eye size={14} /></button>
                         {canApprove && !isSp && e.status === 'Pending' && (
                           <>
-                            <button onClick={() => { setActionTarget({ ...e, action: 'approve' }); rst2() }} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400"><Check size={14} /></button>
-                            <button onClick={() => { setActionTarget({ ...e, action: 'reject' }); rst2() }} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400"><X size={14} /></button>
+                            <button onClick={() => { setActionTarget({ ...e, action: 'approve' }); rst2() }} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400" aria-label="Approve expense"><Check size={14} /></button>
+                            <button onClick={() => { setActionTarget({ ...e, action: 'reject' }); rst2() }} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400" aria-label="Reject expense"><X size={14} /></button>
                           </>
                         )}
                       </div>
@@ -307,20 +307,20 @@ export default function ExpensesPage() {
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Add Expense (Draft)">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <FormField label="Expense Type" required error={errors.expenseTypeId?.message}>
-            <select {...register('expenseTypeId', { required: true })} className="input">
+            <select {...register('expenseTypeId', { required: 'Please select an expense type' })} className="input">
               <option value="">Select type</option>
               {expenseTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </FormField>
           <FormField label="Description" required error={errors.description?.message}>
-            <input {...register('description', { required: true })} className="input" placeholder="Describe the expense" />
+            <input {...register('description', { required: 'Description is required' })} className="input" placeholder="Describe the expense" />
           </FormField>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Amount (₹)" required error={errors.amount?.message}>
-              <input {...register('amount', { required: true })} type="number" step="0.01" className="input" />
+              <input {...register('amount', { required: 'Amount is required', min: { value: 0.01, message: 'Must be greater than 0' } })} type="number" step="0.01" className="input" />
             </FormField>
             <FormField label="Expense Date" required error={errors.expenseDate?.message}>
-              <input {...register('expenseDate', { required: true })} type="date" className="input" />
+              <input {...register('expenseDate', { required: 'Expense date is required' })} type="date" className="input" />
             </FormField>
           </div>
           <FormField label="Proof/Receipt (optional)">
@@ -345,7 +345,7 @@ export default function ExpensesPage() {
               <FormField label="Remarks (optional)"><textarea {...reg2('remarks')} className="input" rows={2} /></FormField>
             ) : (
               <FormField label="Rejection Reason" required>
-                <textarea {...reg2('rejectionReason', { required: true })} className="input" rows={2} placeholder="Please provide reason..." />
+                <textarea {...reg2('rejectionReason', { required: 'Rejection reason is required' })} className="input" rows={2} placeholder="Please provide reason..." />
               </FormField>
             )}
             <div className="flex justify-end gap-3">
@@ -382,7 +382,7 @@ export default function ExpensesPage() {
         </div>
         <form onSubmit={hs2(createType)} className="space-y-3 border-t pt-4">
           <h4 className="font-medium text-sm">Add New Type</h4>
-          <FormField label="Name"><input {...reg2('name', { required: true })} className="input" placeholder="Travel, Food..." /></FormField>
+          <FormField label="Name"><input {...reg2('name', { required: 'Type name is required' })} className="input" placeholder="Travel, Food..." /></FormField>
           <FormField label="Description"><input {...reg2('description')} className="input" /></FormField>
           <button type="submit" className="btn-primary w-full justify-center">Add Type</button>
         </form>
@@ -406,6 +406,9 @@ export default function ExpensesPage() {
           </div>
         </Modal>
       )}
+
+      <ConfirmDialog open={submitConfirmOpen} onClose={() => setSubmitConfirmOpen(false)} onConfirm={submitMonthlyReport} title="Submit Monthly Report" message="Submit all draft expenses to Admin? You cannot edit them after." />
+      <ConfirmDialog open={bulkApproveConfirmOpen} onClose={() => setBulkApproveConfirmOpen(false)} onConfirm={handleBulkApprove} title="Bulk Approve" message={`Are you sure you want to approve ALL pending expenses for ${selectedSp?.name}?`} />
 
       {printData && <MonthlyExpensePrintTemplate data={printData} />}
     </div>

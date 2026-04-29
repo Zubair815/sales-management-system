@@ -9,7 +9,7 @@ export function Modal({ open, onClose, title, children, size = '' }) {
       <div className={`modal ${size === 'lg' ? 'modal-lg' : size === 'xl' ? 'modal-xl' : ''}`}>
         <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-100">
           <h2 className="text-base md:text-lg font-semibold text-gray-900 truncate pr-2">{title}</h2>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 flex-shrink-0">
+          <button onClick={onClose} aria-label="Close" className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 flex-shrink-0">
             <X size={18} />
           </button>
         </div>
@@ -50,7 +50,7 @@ export function Pagination({ page, totalPages, onPageChange }) {
     <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-3">
       <p className="text-sm text-gray-500">Page {page} of {totalPages}</p>
       <div className="flex gap-1 flex-wrap justify-center">
-        <button onClick={() => onPageChange(page - 1)} disabled={page <= 1} className="btn-secondary btn-sm px-2 py-1.5 disabled:opacity-40">
+        <button onClick={() => onPageChange(page - 1)} disabled={page <= 1} aria-label="Previous page" className="btn-secondary btn-sm px-2 py-1.5 disabled:opacity-40">
           <ChevronLeft size={16} />
         </button>
         {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -63,7 +63,7 @@ export function Pagination({ page, totalPages, onPageChange }) {
             </button>
           )
         })}
-        <button onClick={() => onPageChange(page + 1)} disabled={page >= totalPages} className="btn-secondary btn-sm px-2 py-1.5 disabled:opacity-40">
+        <button onClick={() => onPageChange(page + 1)} disabled={page >= totalPages} aria-label="Next page" className="btn-secondary btn-sm px-2 py-1.5 disabled:opacity-40">
           <ChevronRight size={16} />
         </button>
       </div>

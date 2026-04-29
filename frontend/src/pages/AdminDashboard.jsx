@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import api from '../services/api'
+import toast from 'react-hot-toast'
 import { StatCard, LoadingSpinner } from '../components/index.jsx'
 import { ShoppingCart, TrendingUp, Receipt, CreditCard, Clock, AlertTriangle } from 'lucide-react'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, ArcElement } from 'chart.js'
@@ -14,7 +15,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.get('/dashboard/admin').then(r => setData(r.data.data)).catch(() => {}).finally(() => setLoading(false))
+    api.get('/dashboard/admin').then(r => setData(r.data.data)).catch(() => toast.error('Failed to load dashboard data. Please refresh.')).finally(() => setLoading(false))
   }, [])
 
   if (loading) return <LoadingSpinner />

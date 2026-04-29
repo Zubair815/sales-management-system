@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import api from '../services/api'
 import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
-import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader, FormField, EmptyState } from '../components/index.jsx'
+import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader, FormField, EmptyState, LoadingSpinner } from '../components/index.jsx'
 import { Shield, ToggleLeft, ToggleRight, Key, Users, Plus, Edit, Trash2 } from 'lucide-react'
 import { formatPhone } from '../utils/formatPhone'
 import useDebounce from '../hooks/useDebounce'
@@ -88,7 +88,7 @@ export default function AdminsPage() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-12"><div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" /></div>
+          <LoadingSpinner />
         ) : admins.length === 0 ? (
           <EmptyState icon={Users} title="No admins found" action={<button onClick={openCreate} className="btn-primary"><Plus size={16} />Create Admin</button>} />
         ) : (
@@ -107,19 +107,19 @@ export default function AdminsPage() {
                     <td data-label="Last Login" className="text-gray-500">{admin.lastLoginAt ? new Date(admin.lastLoginAt).toLocaleDateString() : 'Never'}</td>
                     <td data-label="Actions" data-cell="actions">
                       <div className="flex flex-wrap items-center gap-1 justify-end md:justify-start">
-                        <Link to={`/admins/${admin.id}/permissions`} className="p-1.5 hover:bg-purple-50 hover:text-purple-600 rounded text-gray-400 transition-colors" title="Permissions">
+                        <Link to={`/admins/${admin.id}/permissions`} className="p-1.5 hover:bg-purple-50 hover:text-purple-600 rounded text-gray-400 transition-colors" title="Permissions" aria-label="Manage permissions">
                           <Shield size={15} />
                         </Link>
-                        <button onClick={() => openEdit(admin)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400 transition-colors" title="Edit">
+                        <button onClick={() => openEdit(admin)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400 transition-colors" title="Edit" aria-label="Edit admin">
                           <Edit size={15} />
                         </button>
-                        <button onClick={() => toggleStatus(admin)} className="p-1.5 hover:bg-yellow-50 hover:text-yellow-600 rounded text-gray-400 transition-colors" title="Toggle Status">
+                        <button onClick={() => toggleStatus(admin)} className="p-1.5 hover:bg-yellow-50 hover:text-yellow-600 rounded text-gray-400 transition-colors" title="Toggle Status" aria-label="Toggle admin status">
                           {admin.status === 'Active' ? <ToggleRight size={15} /> : <ToggleLeft size={15} />}
                         </button>
-                        <button onClick={() => { setResetTarget(admin); rst2() }} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400 transition-colors" title="Reset Password">
+                        <button onClick={() => { setResetTarget(admin); rst2() }} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400 transition-colors" title="Reset Password" aria-label="Reset password">
                           <Key size={15} />
                         </button>
-                        <button onClick={() => setDeleteTarget(admin)} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400 transition-colors" title="Delete">
+                        <button onClick={() => setDeleteTarget(admin)} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400 transition-colors" title="Delete" aria-label="Delete admin">
                           <Trash2 size={15} />
                         </button>
                       </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../services/api'
+import toast from 'react-hot-toast'
 import { StatCard, LoadingSpinner } from '../components/index.jsx'
 import { Users, UserCheck, ShoppingCart, TrendingUp, Activity, Settings, Shield, ChevronRight } from 'lucide-react'
 
@@ -14,7 +15,7 @@ export default function SuperAdminDashboard() {
       api.get('/dashboard/super-admin'),
     ]).then(([statsRes, dashRes]) => {
       setStats({ ...statsRes.data.data, ...dashRes.data.data })
-    }).catch(() => {}).finally(() => setLoading(false))
+    }).catch(() => toast.error('Failed to load dashboard data. Please refresh.')).finally(() => setLoading(false))
   }, [])
 
   if (loading) return <LoadingSpinner />

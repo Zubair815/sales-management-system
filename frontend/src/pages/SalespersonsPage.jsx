@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react' // FIX: L-10 u
 import api from '../services/api'
 import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
-import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader, FormField, EmptyState } from '../components/index.jsx'
+import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader, FormField, EmptyState, LoadingSpinner } from '../components/index.jsx'
 import { Plus, Edit, Trash2, ToggleLeft, ToggleRight, Key, UserCheck } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { formatPhone } from '../utils/formatPhone'
@@ -21,7 +21,7 @@ function useSalespersonsData(debouncedSearch) {
     try {
       const r = await api.get('/salespersons', { params: { page, limit: 10, search: debouncedSearch } })
       setData(r.data.data); setPagination(r.data.pagination)
-    } catch { toast.error('Failed to load') } finally { setLoading(false) }
+    } catch { toast.error('Failed to load salespersons. Please refresh.') } finally { setLoading(false) }
   }, [debouncedSearch])
 
   useEffect(() => { refetch() }, [refetch])
@@ -59,7 +59,7 @@ export default function SalespersonsPage() {
 
   const toggleStatus = async (sp) => {
     try { await api.patch(`/salespersons/${sp.id}/status`); toast.success('Status updated'); fetch() }
-    catch { toast.error('Failed') }
+    catch { toast.error('Failed to toggle status.') }
   }
 
 const deleteSp = async () => {
@@ -109,7 +109,7 @@ const deleteSp = async () => {
 
       <div className="card">
         <div className="mb-4"><SearchInput value={search} onChange={setSearch} placeholder="Search by name, ID..." /></div>
-        {loading ? <div className="flex justify-center py-12"><div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" /></div>
+        {loading ? <LoadingSpinner />
         : data.length === 0 ? <EmptyState icon={UserCheck} title="No salespersons found" />
         : (
           <div className="table-container">
@@ -129,7 +129,7 @@ const deleteSp = async () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {!editItem && (
               <FormField label="Employee ID" required error={errors.employeeId?.message}>
-                <input {...register('employeeId', { required: true, minLength: 8, maxLength: 12, pattern: /^[a-zA-Z0-9]+$/ })} className="input" placeholder="EMP00001" />
+                <input {...register('employeeId', { required: 'Employee ID is required', minLength: { value: 8, message: 'Min 8 characters' }, maxLength: { value: 12, message: 'Max 12 characters' }, pattern: { value: /^[a-zA-Z0-9]+$/, message: 'Alphanumeric only' } })} className="input" placeholder="EMP00001" />
               </FormField>
             )}
             <FormField label="Full Name" required error={errors.name?.message}>
@@ -171,7 +171,7 @@ const deleteSp = async () => {
       <Modal open={!!resetTarget} onClose={() => setResetTarget(null)} title={`Reset Password: ${resetTarget?.name}`}>
         <form onSubmit={hs2(resetPw)} className="space-y-4">
           <FormField label="New Password" required error={err2.password?.message}>
-            <input {...reg2('password', { required: true, minLength: 8, maxLength: 12, pattern: /^[a-zA-Z0-9]+$/ })} type="password" className="input" placeholder="8-12 alphanumeric" />
+            <input {...reg2('password', { required: 'Password is required', minLength: { value: 8, message: 'Min 8 characters' }, maxLength: { value: 12, message: 'Max 12 characters' }, pattern: { value: /^[a-zA-Z0-9]+$/, message: 'Alphanumeric only' } })} type="password" className="input" placeholder="8-12 alphanumeric" />
           </FormField>
           <div className="flex justify-end gap-3"><button type="button" onClick={() => setResetTarget(null)} className="btn-secondary">Cancel</button><button type="submit" className="btn-primary">Reset</button></div>
         </form>

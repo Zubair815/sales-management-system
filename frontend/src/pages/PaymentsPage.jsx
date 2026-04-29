@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import api from '../services/api'
 import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
-import { Modal, Pagination, StatusBadge, PageHeader, EmptyState, FormField, SearchInput } from '../components/index.jsx'
+import { Modal, Pagination, StatusBadge, PageHeader, EmptyState, FormField, SearchInput, LoadingSpinner } from '../components/index.jsx'
 import { Plus, Eye, Check, X, CreditCard, Printer } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import PaymentPrintTemplate from '../components/PaymentPrintTemplate.jsx'
@@ -33,15 +33,15 @@ export default function PaymentsPage() {
     try {
       const r = await api.get('/payments', { params: { page, limit: 10, status: statusFilter, search: debouncedSearch } })
       setData(r.data.data); setPagination(r.data.pagination)
-    } catch { toast.error('Failed') } finally { setLoading(false) }
+    } catch { toast.error('Failed to load payments. Please refresh.') } finally { setLoading(false) }
   }
 
   useEffect(() => { fetch() }, [statusFilter, debouncedSearch])
 
   useEffect(() => {
     if (isSp) {
-      api.get('/parties', { params: { limit: 100 } }).then(r => setParties(r.data.data)).catch(() => {})
-      api.get('/orders', { params: { limit: 100 } }).then(r => setOrders(r.data.data)).catch(() => {})
+      api.get('/parties', { params: { limit: 100 } }).then(r => setParties(r.data.data)).catch(() => toast.error('Failed to load parties.'))
+      api.get('/orders', { params: { limit: 100 } }).then(r => setOrders(r.data.data)).catch(() => toast.error('Failed to load orders.'))
     }
   }, [isSp])
 
@@ -57,21 +57,21 @@ export default function PaymentsPage() {
 
   const verify = async (id) => {
     try { await api.patch(`/payments/${id}/verify`); toast.success('Payment verified'); fetch() }
-    catch { toast.error('Failed') }
+    catch { toast.error('Failed to verify payment.') }
   }
 
   const reject = async (d) => {
     try {
       await api.patch(`/payments/${rejectTarget.id}/reject`, { rejectionReason: d.rejectionReason })
       toast.success('Payment rejected'); setRejectTarget(null); rst2(); fetch()
-    } catch { toast.error('Failed') }
+    } catch { toast.error('Failed to reject payment.') }
   }
 
   const openPrint = async (payment) => {
     try {
       const template = await api.get('/print/templates/payment')
       setPrintItem({ payment, template: template.data.data })
-    } catch { toast.error('Failed') }
+    } catch { toast.error('Failed to load print data.') }
   }
 
   const MODES = ['Cash', 'Cheque', 'NEFT', 'UPI', 'Other']
@@ -92,7 +92,7 @@ export default function PaymentsPage() {
           </select>
         </div>
 
-        {loading ? <div className="flex justify-center py-12"><div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" /></div>
+        {loading ? <LoadingSpinner />
         : data.length === 0 ? <EmptyState icon={CreditCard} title="No payments found" />
         : (
           <div className="table-container">
@@ -110,12 +110,12 @@ export default function PaymentsPage() {
                     <td data-label="Status"><StatusBadge status={p.status} /></td>
                     <td data-label="Actions" data-cell="actions">
                       <div className="flex flex-wrap gap-1 justify-end md:justify-start">
-                        <button onClick={() => setViewItem(p)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400"><Eye size={14} /></button>
-                        <button onClick={() => openPrint(p)} className="p-1.5 hover:bg-gray-50 hover:text-gray-700 rounded text-gray-400"><Printer size={14} /></button>
+                        <button onClick={() => setViewItem(p)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400" aria-label="View payment"><Eye size={14} /></button>
+                        <button onClick={() => openPrint(p)} className="p-1.5 hover:bg-gray-50 hover:text-gray-700 rounded text-gray-400" aria-label="Print receipt"><Printer size={14} /></button>
                         {canVerify && p.status === 'Pending' && (
                           <>
-                            <button onClick={() => verify(p.id)} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400"><Check size={14} /></button>
-                            <button onClick={() => { setRejectTarget(p); rst2() }} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400"><X size={14} /></button>
+                            <button onClick={() => verify(p.id)} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400" aria-label="Verify payment"><Check size={14} /></button>
+                            <button onClick={() => { setRejectTarget(p); rst2() }} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400" aria-label="Reject payment"><X size={14} /></button>
                           </>
                         )}
                       </div>
@@ -133,7 +133,7 @@ export default function PaymentsPage() {
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Record Payment">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <FormField label="Party" required>
-            <select {...register('partyId', { required: true })} className="input">
+            <select {...register('partyId', { required: 'Please select a party' })} className="input">
               <option value="">Select Party</option>
               {parties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
@@ -146,13 +146,13 @@ export default function PaymentsPage() {
           </FormField>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Amount (₹)" required>
-              <input {...register('amount', { required: true })} type="number" step="0.01" className="input" />
+              <input {...register('amount', { required: 'Amount is required', min: { value: 0.01, message: 'Amount must be greater than 0' } })} type="number" step="0.01" className="input" />
             </FormField>
             <FormField label="Payment Date" required>
-              <input {...register('paymentDate', { required: true })} type="date" className="input" />
+              <input {...register('paymentDate', { required: 'Payment date is required' })} type="date" className="input" />
             </FormField>
             <FormField label="Payment Mode" required>
-              <select {...register('paymentMode', { required: true })} className="input">
+              <select {...register('paymentMode', { required: 'Please select a payment mode' })} className="input">
                 <option value="">Select</option>
                 {MODES.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
@@ -179,7 +179,7 @@ export default function PaymentsPage() {
         <form onSubmit={hs2(reject)} className="space-y-4">
           <p className="text-sm text-gray-600">{rejectTarget?.party?.name} - ₹{Number(rejectTarget?.amount || 0).toLocaleString()}</p>
           <FormField label="Rejection Reason" required>
-            <textarea {...reg2('rejectionReason', { required: true })} className="input" rows={3} />
+            <textarea {...reg2('rejectionReason', { required: 'Rejection reason is required' })} className="input" rows={3} />
           </FormField>
           <div className="flex justify-end gap-3">
             <button type="button" onClick={() => setRejectTarget(null)} className="btn-secondary">Cancel</button>

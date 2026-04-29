@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import api from '../services/api'
 import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
-import { PageHeader, FormField } from '../components/index.jsx'
+import { PageHeader, FormField, LoadingSpinner } from '../components/index.jsx'
 import { Save, Upload, Eye, FileText } from 'lucide-react'
 
 const TEMPLATE_TYPES = [
@@ -67,7 +67,7 @@ export default function PrintTemplatePage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12"><div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" /></div>
+        <LoadingSpinner />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Settings */}
