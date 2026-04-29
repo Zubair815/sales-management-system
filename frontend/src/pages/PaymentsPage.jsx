@@ -110,7 +110,7 @@ export default function PaymentsPage() {
                     <td data-label="Date" className="text-xs text-gray-500">{new Date(p.paymentDate).toLocaleDateString()}</td>
                     {!isSp && <td data-label="Salesperson" className="text-sm font-medium">{p.salesperson?.name}</td>}
                     <td data-label="Party" className="text-sm">{p.party?.name}</td>
-                    <td data-label="Amount" className="font-semibold text-green-700">₹{Number(p.amount).toLocaleString()}</td>
+                    <td data-label="Amount" className="font-semibold text-green-700">Rs {Number(p.amount).toLocaleString()}</td>
                     <td data-label="Mode"><span className="badge badge-blue">{p.paymentMode}</span></td>
                     <td data-label="Status"><StatusBadge status={p.status} /></td>
                     <td data-label="Actions" data-cell="actions">
@@ -146,11 +146,11 @@ export default function PaymentsPage() {
           <FormField label="Linked Order (optional)">
             <select {...register('orderId')} className="input">
               <option value="">None</option>
-              {orders.map(o => <option key={o.id} value={o.id}>{o.orderNumber} - ₹{Number(o.grandTotal).toLocaleString()}</option>)}
+              {orders.map(o => <option key={o.id} value={o.id}>{o.orderNumber} - Rs {Number(o.grandTotal).toLocaleString()}</option>)}
             </select>
           </FormField>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormField label="Amount (₹)" required>
+            <FormField label="Amount (Rs)" required>
               <input {...register('amount', { required: 'Amount is required', min: { value: 0.01, message: 'Amount must be greater than 0' } })} type="number" step="0.01" className="input" />
             </FormField>
             <FormField label="Payment Date" required>
@@ -182,7 +182,7 @@ export default function PaymentsPage() {
       {/* Reject Modal */}
       <Modal open={!!rejectTarget} onClose={() => setRejectTarget(null)} title="Reject Payment">
         <form onSubmit={hs2(reject)} className="space-y-4">
-          <p className="text-sm text-gray-600">{rejectTarget?.party?.name} - ₹{Number(rejectTarget?.amount || 0).toLocaleString()}</p>
+          <p className="text-sm text-gray-600">{rejectTarget?.party?.name} - Rs {Number(rejectTarget?.amount || 0).toLocaleString()}</p>
           <FormField label="Rejection Reason" required>
             <textarea {...reg2('rejectionReason', { required: 'Rejection reason is required' })} className="input" rows={3} />
           </FormField>

@@ -98,7 +98,7 @@ export default function MonthlyExpensePrintTemplate({ data }) {
               </div>
               <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-200">
                 <span className="text-gray-500 font-semibold text-sm">Total Value:</span>
-                <span className="font-bold text-lg text-gray-900">₹{grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                <span className="font-bold text-lg text-gray-900">Rs {grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
               </div>
             </div>
           </div>
@@ -126,14 +126,14 @@ export default function MonthlyExpensePrintTemplate({ data }) {
                     {e.status}
                   </span>
                 </td>
-                <td className="text-right font-medium text-gray-900">₹{Number(e.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td className="text-right font-medium text-gray-900">Rs {Number(e.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr>
               <td colSpan="4" className="text-right font-bold text-gray-700 py-4">Total Expenses for Period:</td>
-              <td className="text-right font-bold text-lg text-gray-900 py-4">₹{grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+              <td className="text-right font-bold text-lg text-gray-900 py-4">Rs {grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
             </tr>
           </tfoot>
         </table>
@@ -172,7 +172,7 @@ export default function MonthlyExpensePrintTemplate({ data }) {
                 </div>
                 <div className="flex justify-between mb-1 text-sm">
                   <span className="text-gray-500 font-medium mr-4">Amount:</span>
-                  <span className="text-gray-900 font-bold">₹{Number(e.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                  <span className="text-gray-900 font-bold">Rs {Number(e.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                 </div>
                 {e.description && (
                   <div className="mt-3 pt-3 border-t border-gray-200 text-sm text-gray-600">

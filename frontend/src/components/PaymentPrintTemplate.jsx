@@ -125,7 +125,7 @@ export default function PaymentPrintTemplate({ data }) {
           <div className="flex-1 flex items-center justify-center">
             <div className="amount-box p-8 rounded-xl shadow-lg text-center w-full max-w-sm">
               <p className="text-sm text-gray-300 uppercase tracking-widest font-semibold mb-2">Amount Received</p>
-              <p className="text-5xl font-bold mb-3 tracking-tight">₹{Number(p.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+              <p className="text-5xl font-bold mb-3 tracking-tight">Rs {Number(p.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
               <div className="border-t border-gray-700 pt-3 mt-1">
                 <p className="text-sm text-gray-300 italic capitalize leading-snug">{amountToWords(p.amount)}</p>
               </div>
@@ -168,7 +168,7 @@ export default function PaymentPrintTemplate({ data }) {
               </div>
               <div className="flex justify-between mb-1 text-sm">
                 <span className="text-gray-500 font-medium mr-4">Amount:</span>
-                <span className="text-gray-900 font-bold">₹{Number(p.amount).toLocaleString()}</span>
+                <span className="text-gray-900 font-bold">Rs {Number(p.amount).toLocaleString()}</span>
               </div>
             </div>
           </div>

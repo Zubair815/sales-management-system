@@ -16,7 +16,7 @@ const REPORT_TYPES = [
   { id: 'inventory-valuation', label: 'Inventory Valuation', icon: Package, color: 'red' },
 ]
 
-const fmt = n => `₹${Number(n || 0).toLocaleString()}`
+const fmt = n => `Rs ${Number(n || 0).toLocaleString()}`
 
 export default function ReportsPage() {
   const [activeReport, setActiveReport] = useState('order-payment')

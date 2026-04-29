@@ -51,7 +51,7 @@ export default function ExpensePrintTemplate({ data }) {
               <td className="p-2 border-b border-gray-100">{new Date(e.expenseDate).toLocaleDateString('en-IN')}</td>
               <td className="p-2 border-b border-gray-100">{e.expenseType?.name}</td>
               <td className="p-2 border-b border-gray-100">{e.description}</td>
-              <td className="p-2 border-b border-gray-100 text-right font-semibold">₹{Number(e.amount).toLocaleString()}</td>
+              <td className="p-2 border-b border-gray-100 text-right font-semibold">Rs {Number(e.amount).toLocaleString()}</td>
               <td className="p-2 border-b border-gray-100 text-center">
                 <span className={`px-1.5 py-0.5 rounded text-xs font-semibold ${
                   e.status === 'Approved' ? 'bg-green-100 text-green-800' :
@@ -70,16 +70,16 @@ export default function ExpensePrintTemplate({ data }) {
           {Object.entries(byType).map(([type, amount]) => (
             <div key={type} className="flex justify-between text-xs py-1 border-b border-gray-100">
               <span className="text-gray-600">{type}</span>
-              <span className="font-semibold">₹{amount.toLocaleString()}</span>
+              <span className="font-semibold">Rs {amount.toLocaleString()}</span>
             </div>
           ))}
         </div>
         <div className="flex flex-col justify-end">
           <div className="space-y-1 text-xs">
-            <div className="flex justify-between"><span className="text-gray-500">Total Submitted:</span><span>₹{total.toLocaleString()}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Total Approved:</span><span className="text-green-700">₹{approved.toLocaleString()}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Total Submitted:</span><span>Rs {total.toLocaleString()}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Total Approved:</span><span className="text-green-700">Rs {approved.toLocaleString()}</span></div>
             <div className="flex justify-between font-bold text-sm border-t border-gray-800 pt-1">
-              <span>Grand Total:</span><span>₹{total.toLocaleString()}</span>
+              <span>Grand Total:</span><span>Rs {total.toLocaleString()}</span>
             </div>
           </div>
         </div>

@@ -144,8 +144,8 @@ export default function OrderPrintTemplate({ data }) {
                 <td className="py-3 px-4 text-gray-500 text-xs">{item.inventoryItem?.sku || item.sku}</td>
                 <td className="py-3 px-4 text-center font-medium">{item.quantity}</td>
                 <td className="py-3 px-4 text-center text-gray-500">{item.inventoryItem?.unit || item.unit}</td>
-                <td className="py-3 px-4 text-right text-gray-700">₹{Number(item.unitPrice).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                <td className="py-3 px-4 text-right font-semibold text-gray-900">₹{Number(item.totalPrice).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td className="py-3 px-4 text-right text-gray-700">Rs {Number(item.unitPrice).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td className="py-3 px-4 text-right font-semibold text-gray-900">Rs {Number(item.totalPrice).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
               </tr>
             ))}
           </tbody>
@@ -166,17 +166,17 @@ export default function OrderPrintTemplate({ data }) {
           <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 print-header-bg">
             <div className="flex justify-between text-gray-600 mb-2">
               <span className="font-medium">Subtotal</span>
-              <span>₹{Number(o.totalAmount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+              <span>Rs {Number(o.totalAmount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
             </div>
             {Number(o.taxAmount) > 0 && (
               <div className="flex justify-between text-gray-600 mb-2">
                 <span className="font-medium">Tax</span>
-                <span>₹{Number(o.taxAmount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                <span>Rs {Number(o.taxAmount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
               </div>
             )}
             <div className="flex justify-between font-bold text-xl pt-3 mt-2 border-t border-gray-300 text-gray-900">
               <span>Total Amount</span>
-              <span>₹{Number(o.grandTotal).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+              <span>Rs {Number(o.grandTotal).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
             </div>
           </div>
         </div>

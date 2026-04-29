@@ -37,7 +37,7 @@ export default function SalespersonDashboard() {
 
   if (loading) return <LoadingSpinner />
 
-  const fmt = n => `₹${Number(n || 0).toLocaleString()}`
+  const fmt = n => `Rs ${Number(n || 0).toLocaleString()}`
 
   return (
     <div className="space-y-6">
@@ -75,7 +75,7 @@ export default function SalespersonDashboard() {
                   <p className="text-xs text-gray-500">{order.party?.name} · {new Date(order.createdAt).toLocaleDateString()}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-semibold text-gray-800">₹{Number(order.grandTotal).toLocaleString()}</p>
+                  <p className="text-sm font-semibold text-gray-800">Rs {Number(order.grandTotal).toLocaleString()}</p>
                   <StatusBadge status={order.status} />
                 </div>
               </div>

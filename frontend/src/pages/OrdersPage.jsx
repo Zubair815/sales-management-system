@@ -126,7 +126,7 @@ export default function OrdersPage() {
                     <td data-label="Order #" className="font-mono text-xs text-blue-700 font-semibold">{o.orderNumber}</td>
                     <td data-label="Party" className="font-medium">{o.party?.name}</td>
                     {!isSp && <td data-label="Salesperson" className="text-gray-500 text-sm">{o.salesperson?.name}</td>}
-                    <td className="font-semibold text-green-700">₹{Number(o.grandTotal).toLocaleString()}</td>
+                    <td className="font-semibold text-green-700">Rs {Number(o.grandTotal).toLocaleString()}</td>
                     <td data-label="Status"><StatusBadge status={o.status} /></td>
                     <td data-label="Date" className="text-gray-500 text-xs">{new Date(o.createdAt).toLocaleDateString()}</td>
                     <td data-label="Actions" data-cell="actions">
@@ -197,7 +197,7 @@ export default function OrdersPage() {
                   <div className="sm:col-span-1 flex items-center justify-between sm:justify-center h-10">
                     <span className="text-xs text-gray-500 sm:hidden">Total:</span>
                     <span className="text-xs text-gray-500 font-semibold">
-                      ₹{((parseFloat(watchItems?.[idx]?.unitPrice) || 0) * (parseInt(watchItems?.[idx]?.quantity) || 0)).toLocaleString()}
+                      Rs {((parseFloat(watchItems?.[idx]?.unitPrice) || 0) * (parseInt(watchItems?.[idx]?.quantity) || 0)).toLocaleString()}
                     </span>
                   </div>
                   <div className="sm:col-span-1 flex items-center h-10">
@@ -209,7 +209,7 @@ export default function OrdersPage() {
           </div>
 
           <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-            <div className="text-sm text-gray-500">Total: <span className="text-lg font-bold text-gray-900">₹{total.toLocaleString()}</span></div>
+            <div className="text-sm text-gray-500">Total: <span className="text-lg font-bold text-gray-900">Rs {total.toLocaleString()}</span></div>
             <div className="flex gap-3">
               <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">Cancel</button>
               <button type="submit" disabled={submitting} className="btn-primary">{submitting ? <><ButtonSpinner /> Saving...</> : 'Save as Draft'}</button>
@@ -237,17 +237,17 @@ export default function OrdersPage() {
                       <td data-label="Item">{oi.item?.name}</td>
                       <td data-label="SKU" className="font-mono text-xs">{oi.item?.sku}</td>
                       <td data-label="Qty">{oi.quantity}</td>
-                      <td>₹{Number(oi.unitPrice).toLocaleString()}</td>
-                      <td className="font-semibold">₹{Number(oi.totalPrice).toLocaleString()}</td>
+                      <td>Rs {Number(oi.unitPrice).toLocaleString()}</td>
+                      <td className="font-semibold">Rs {Number(oi.totalPrice).toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
             <div className="text-right">
-              <p className="text-sm text-gray-500">Subtotal: ₹{Number(viewOrder.totalAmount).toLocaleString()}</p>
-              {viewOrder.taxAmount > 0 && <p className="text-sm text-gray-500">Tax: ₹{Number(viewOrder.taxAmount).toLocaleString()}</p>}
-              <p className="text-lg font-bold text-gray-900">Grand Total: ₹{Number(viewOrder.grandTotal).toLocaleString()}</p>
+              <p className="text-sm text-gray-500">Subtotal: Rs {Number(viewOrder.totalAmount).toLocaleString()}</p>
+              {viewOrder.taxAmount > 0 && <p className="text-sm text-gray-500">Tax: Rs {Number(viewOrder.taxAmount).toLocaleString()}</p>}
+              <p className="text-lg font-bold text-gray-900">Grand Total: Rs {Number(viewOrder.grandTotal).toLocaleString()}</p>
             </div>
             
             <div className="flex gap-2 pt-2 border-t border-gray-100 flex-wrap">

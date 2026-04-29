@@ -8,7 +8,7 @@ import { Bar, Doughnut } from 'react-chartjs-2'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, ArcElement)
 
-const fmt = n => `₹${Number(n || 0).toLocaleString()}`
+const fmt = n => `Rs ${Number(n || 0).toLocaleString()}`
 
 export default function AdminDashboard() {
   const [data, setData] = useState(null)

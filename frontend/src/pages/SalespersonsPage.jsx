@@ -96,7 +96,7 @@ const deleteSp = async () => {
       <td data-label="Region" className="text-gray-500">{sp.region || '-'}</td>
       <td data-label="Role" className="text-gray-500 text-xs">{sp.jobRole || '-'}</td>
       <td data-label="Status"><StatusBadge status={sp.status} /></td>
-      <td data-label="Target" className="text-gray-500">{sp.targetAmount ? `₹${Number(sp.targetAmount).toLocaleString()}` : '-'}</td>
+      <td data-label="Target" className="text-gray-500">{sp.targetAmount ? `Rs ${Number(sp.targetAmount).toLocaleString()}` : '-'}</td>
       <td data-label="Actions" data-cell="actions">
         <div className="flex flex-wrap items-center gap-1 justify-end md:justify-start">
           {/* FIX: H-4 — aria-label on all icon-only buttons */}

@@ -46,7 +46,7 @@ export default function SuperAdminDashboard() {
         <StatCard icon={Users} label="Active Admins" value={stats?.activeAdmins ?? '-'} color="blue" />
         <StatCard icon={UserCheck} label="Active Salespersons" value={stats?.activeSalespersons ?? '-'} color="green" />
         <StatCard icon={ShoppingCart} label="Total Orders" value={stats?.totalOrders ?? '-'} color="yellow" />
-        <StatCard icon={TrendingUp} label="Total Revenue" value={stats?.totalRevenue ? `₹${Number(stats.totalRevenue).toLocaleString()}` : '-'} color="purple" />
+        <StatCard icon={TrendingUp} label="Total Revenue" value={stats?.totalRevenue ? `Rs ${Number(stats.totalRevenue).toLocaleString()}` : '-'} color="purple" />
       </div>
 
       {/* Quick links */}

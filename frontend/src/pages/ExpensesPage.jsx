@@ -254,8 +254,8 @@ export default function ExpensesPage() {
                       </div>
                     </td>
                     <td data-label="Total Expenses"><span className="font-medium">{rep.totalExpenses}</span> <span className="text-xs text-gray-500">({rep.pendingCount} pending)</span></td>
-                    <td className="font-semibold text-orange-600">₹{rep.pendingAmount.toLocaleString()}</td>
-                    <td className="font-semibold text-green-700">₹{rep.totalAmount.toLocaleString()}</td>
+                    <td className="font-semibold text-orange-600">Rs {rep.pendingAmount.toLocaleString()}</td>
+                    <td className="font-semibold text-green-700">Rs {rep.totalAmount.toLocaleString()}</td>
                     <td data-label="Status">
                       <span className={`px-2 py-1 rounded text-xs font-medium ${rep.pendingCount > 0 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
                         {rep.status}
@@ -285,7 +285,7 @@ export default function ExpensesPage() {
                     <td data-label="Date" className="text-xs text-gray-500">{new Date(e.expenseDate).toLocaleDateString()}</td>
                     <td data-label="Type" className="text-sm">{e.expenseType?.name}</td>
                     <td data-label="Description" className="text-sm whitespace-normal md:max-w-xs md:truncate">{e.description}</td>
-                    <td className="font-semibold text-green-700">₹{Number(e.amount).toLocaleString()}</td>
+                    <td className="font-semibold text-green-700">Rs {Number(e.amount).toLocaleString()}</td>
                     <td data-label="Status"><StatusBadge status={e.status} /></td>
                     <td data-label="Proof">{e.proofFilePath ? <a href={e.proofFilePath} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-blue-600 hover:underline text-xs"><Paperclip size={12} />View</a> : <span className="text-gray-300 text-xs">None</span>}</td>
                     <td data-label="Actions" data-cell="actions">
@@ -323,7 +323,7 @@ export default function ExpensesPage() {
             <input {...register('description', { required: 'Description is required' })} className="input" placeholder="Describe the expense" />
           </FormField>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormField label="Amount (₹)" required error={errors.amount?.message}>
+            <FormField label="Amount (Rs)" required error={errors.amount?.message}>
               <input {...register('amount', { required: 'Amount is required', min: { value: 0.01, message: 'Must be greater than 0' } })} type="number" step="0.01" className="input" />
             </FormField>
             <FormField label="Expense Date" required error={errors.expenseDate?.message}>
@@ -344,7 +344,7 @@ export default function ExpensesPage() {
       {actionTarget && (
         <Modal open={!!actionTarget} onClose={() => setActionTarget(null)} title={actionTarget.action === 'approve' ? 'Approve Expense' : 'Reject Expense'}>
           <div className="mb-4 p-3 bg-gray-50 rounded-lg text-sm">
-            <p className="text-gray-600">{actionTarget.expenseType?.name} - ₹{Number(actionTarget.amount).toLocaleString()}</p>
+            <p className="text-gray-600">{actionTarget.expenseType?.name} - Rs {Number(actionTarget.amount).toLocaleString()}</p>
             <p className="text-gray-500 text-xs">{actionTarget.description}</p>
           </div>
           <form onSubmit={hs2(actionTarget.action === 'approve' ? approveExpense : rejectExpense)} className="space-y-4">
@@ -402,7 +402,7 @@ export default function ExpensesPage() {
           <div className="space-y-2 text-sm">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><span className="text-gray-500">Type:</span> <span className="font-medium">{viewItem.expenseType?.name}</span></div>
-              <div><span className="text-gray-500">Amount:</span> <span className="font-semibold text-green-700">₹{Number(viewItem.amount).toLocaleString()}</span></div>
+              <div><span className="text-gray-500">Amount:</span> <span className="font-semibold text-green-700">Rs {Number(viewItem.amount).toLocaleString()}</span></div>
               <div><span className="text-gray-500">Date:</span> <span>{new Date(viewItem.expenseDate).toLocaleDateString()}</span></div>
               <div className="col-span-2"><span className="text-gray-500">Description:</span> <span>{viewItem.description}</span></div>
               <div><span className="text-gray-500">Status:</span> <StatusBadge status={viewItem.status} /></div>

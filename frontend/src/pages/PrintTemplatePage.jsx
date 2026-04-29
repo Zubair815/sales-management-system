@@ -142,17 +142,17 @@ export default function PrintTemplatePage() {
                   <table className="w-full border-collapse">
                     <thead><tr className="bg-gray-800 text-white"><th className="p-1 text-left">#</th><th className="p-1 text-left">Item</th><th className="p-1 text-right">Qty</th><th className="p-1 text-right">Price</th><th className="p-1 text-right">Total</th></tr></thead>
                     <tbody>
-                      <tr className="border-b"><td className="p-1">1</td><td className="p-1">Sample Product</td><td className="p-1 text-right">5</td><td className="p-1 text-right">₹1,000</td><td className="p-1 text-right font-semibold">₹5,000</td></tr>
+                      <tr className="border-b"><td className="p-1">1</td><td className="p-1">Sample Product</td><td className="p-1 text-right">5</td><td className="p-1 text-right">Rs 1,000</td><td className="p-1 text-right font-semibold">Rs 5,000</td></tr>
                     </tbody>
                   </table>
-                  <div className="text-right mt-2"><p className="font-bold">Grand Total: ₹5,000</p></div>
+                  <div className="text-right mt-2"><p className="font-bold">Grand Total: Rs 5,000</p></div>
                 </div>
               )}
 
               {active === 'payment' && (
                 <div className="space-y-2">
                   <div className="flex justify-between py-1 border-b"><span className="text-gray-500">Received From:</span><span className="font-medium">Acme Corp</span></div>
-                  <div className="flex justify-between py-1 border-b"><span className="text-gray-500">Amount:</span><span className="font-bold text-lg">₹25,000</span></div>
+                  <div className="flex justify-between py-1 border-b"><span className="text-gray-500">Amount:</span><span className="font-bold text-lg">Rs 25,000</span></div>
                   <div className="flex justify-between py-1 border-b"><span className="text-gray-500">Mode:</span><span>NEFT</span></div>
                   <div className="bg-gray-800 text-white p-3 rounded text-center mt-2">
                     <p className="text-xs text-gray-300">Amount in Words</p>
@@ -167,10 +167,10 @@ export default function PrintTemplatePage() {
                   <table className="w-full border-collapse">
                     <thead><tr className="bg-gray-800 text-white"><th className="p-1 text-left">Date</th><th className="p-1 text-left">Type</th><th className="p-1 text-left">Description</th><th className="p-1 text-right">Amount</th><th className="p-1 text-center">Status</th></tr></thead>
                     <tbody>
-                      <tr className="border-b"><td className="p-1">01/03/24</td><td className="p-1">Travel</td><td className="p-1">Train ticket</td><td className="p-1 text-right">₹1,500</td><td className="p-1 text-center text-green-600">Approved</td></tr>
+                      <tr className="border-b"><td className="p-1">01/03/24</td><td className="p-1">Travel</td><td className="p-1">Train ticket</td><td className="p-1 text-right">Rs 1,500</td><td className="p-1 text-center text-green-600">Approved</td></tr>
                     </tbody>
                   </table>
-                  <div className="text-right mt-2"><p className="font-bold">Total: ₹1,500</p></div>
+                  <div className="text-right mt-2"><p className="font-bold">Total: Rs 1,500</p></div>
                 </div>
               )}
 

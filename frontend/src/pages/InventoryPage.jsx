@@ -80,7 +80,7 @@ export default function InventoryPage() {
                     <td data-label="SKU" className="font-mono text-xs text-blue-700 font-semibold">{item.sku}</td>
                     <td data-label="Name" className="font-medium">{item.name}</td>
                     <td data-label="Category" className="text-gray-500 text-xs">{item.category || '-'}</td>
-                    <td data-label="Price" className="font-semibold text-green-700">₹{Number(item.sellingPrice).toLocaleString()}</td>
+                    <td data-label="Price" className="font-semibold text-green-700">Rs {Number(item.sellingPrice).toLocaleString()}</td>
                     <td data-label="Stock">
                       <div className="flex items-center gap-1.5">
                         <span className={`font-semibold ${item.stockQuantity <= item.lowStockThreshold ? 'text-red-600' : 'text-gray-800'}`}>{item.stockQuantity}</span>
