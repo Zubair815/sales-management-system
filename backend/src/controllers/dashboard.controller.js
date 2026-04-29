@@ -22,10 +22,10 @@ const getAdminDashboard = async (req, res) => {
       orderTrend, expensesByType, lowStockItems,
       topSalespersons,
     ] = await Promise.all([
-      prisma.order.count({ where: { deletedAt: null, createdAt: { gte: startOfMonth }, status: { not: 'Cancelled' } } }),
-      prisma.order.count({ where: { deletedAt: null, createdAt: { gte: startOfYear }, status: { not: 'Cancelled' } } }),
-      prisma.order.aggregate({ where: { deletedAt: null, createdAt: { gte: startOfMonth }, status: { not: 'Cancelled' } }, _sum: { grandTotal: true } }),
-      prisma.order.aggregate({ where: { deletedAt: null, createdAt: { gte: startOfYear }, status: { not: 'Cancelled' } }, _sum: { grandTotal: true } }),
+      prisma.order.count({ where: { deletedAt: null, createdAt: { gte: startOfMonth }, status: { notIn: ['Cancelled', 'Prepared'] } } }),
+      prisma.order.count({ where: { deletedAt: null, createdAt: { gte: startOfYear }, status: { notIn: ['Cancelled', 'Prepared'] } } }),
+      prisma.order.aggregate({ where: { deletedAt: null, createdAt: { gte: startOfMonth }, status: { notIn: ['Cancelled', 'Prepared'] } }, _sum: { grandTotal: true } }),
+      prisma.order.aggregate({ where: { deletedAt: null, createdAt: { gte: startOfYear }, status: { notIn: ['Cancelled', 'Prepared'] } }, _sum: { grandTotal: true } }),
       prisma.expense.aggregate({ where: { deletedAt: null, expenseDate: { gte: startOfMonth }, status: 'Approved' }, _sum: { amount: true } }),
       prisma.expense.aggregate({ where: { deletedAt: null, expenseDate: { gte: startOfYear }, status: 'Approved' }, _sum: { amount: true } }),
       prisma.payment.aggregate({ where: { deletedAt: null, paymentDate: { gte: startOfMonth }, status: 'Verified' }, _sum: { amount: true } }),
@@ -34,13 +34,13 @@ const getAdminDashboard = async (req, res) => {
       prisma.expense.count({ where: { deletedAt: null, status: 'Pending' } }),
       prisma.payment.count({ where: { deletedAt: null, status: 'Pending' } }),
       // Last 7 days order trend
-      prisma.$queryRaw`SELECT DATE(created_at) as date, COUNT(*) as count, SUM(grand_total) as revenue FROM orders WHERE deleted_at IS NULL AND created_at >= NOW() - INTERVAL 7 DAY GROUP BY DATE(created_at) ORDER BY date`,
+      prisma.$queryRaw`SELECT DATE(created_at) as date, COUNT(*) as count, SUM(grand_total) as revenue FROM orders WHERE deleted_at IS NULL AND status NOT IN ('Cancelled', 'Prepared') AND created_at >= NOW() - INTERVAL 7 DAY GROUP BY DATE(created_at) ORDER BY date`,
       // Expenses by type
       prisma.expense.groupBy({ by: ['expenseTypeId'], where: { deletedAt: null, status: 'Approved', expenseDate: { gte: startOfMonth } }, _sum: { amount: true } }),
       // Low stock
       prisma.inventoryItem.findMany({ where: { deletedAt: null, status: 'Active' }, take: 100 }),
       // Top salespersons
-      prisma.$queryRaw`SELECT s.name, s.employee_id as "employeeId", SUM(o.grand_total) as revenue FROM salespersons s JOIN orders o ON o.salesperson_id = s.id WHERE o.deleted_at IS NULL AND o.status != 'Cancelled' AND o.created_at >= ${startOfMonth} GROUP BY s.id, s.name, s.employee_id ORDER BY revenue DESC LIMIT 5`,
+      prisma.$queryRaw`SELECT s.name, s.employee_id as "employeeId", SUM(o.grand_total) as revenue FROM salespersons s JOIN orders o ON o.salesperson_id = s.id WHERE o.deleted_at IS NULL AND o.status NOT IN ('Cancelled', 'Prepared') AND o.created_at >= ${startOfMonth} GROUP BY s.id, s.name, s.employee_id ORDER BY revenue DESC LIMIT 5`,
     ]);
 
     const lowStock = lowStockItems.filter(i => i.stockQuantity <= i.lowStockThreshold);
@@ -103,8 +103,8 @@ const getSuperAdminDashboard = async (req, res) => {
     const [totalAdmins, totalSalespersons, totalOrders, totalRevenue, recentAuditLogs] = await Promise.all([
       prisma.admin.count({ where: { deletedAt: null, status: 'Active' } }),
       prisma.salesperson.count({ where: { deletedAt: null, status: 'Active' } }),
-      prisma.order.count({ where: { deletedAt: null } }),
-      prisma.order.aggregate({ where: { deletedAt: null, status: { not: 'Cancelled' } }, _sum: { grandTotal: true } }),
+      prisma.order.count({ where: { deletedAt: null, status: { notIn: ['Cancelled', 'Prepared'] } } }),
+      prisma.order.aggregate({ where: { deletedAt: null, status: { notIn: ['Cancelled', 'Prepared'] } }, _sum: { grandTotal: true } }),
       prisma.auditLog.findMany({ orderBy: { createdAt: 'desc' }, take: 10 }),
     ]);
     

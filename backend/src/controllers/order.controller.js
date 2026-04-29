@@ -17,7 +17,12 @@ const getOrders = async (req, res) => {
     if (req.user.role === 'Salesperson') where.salespersonId = req.user.id;
     else if (salespersonId) where.salespersonId = salespersonId;
 
-    if (status) where.status = status;
+    if (status) {
+      where.status = status;
+    } else if (req.user.role !== 'Salesperson') {
+      // Hide draft (Prepared) orders from admin unless explicitly filtered
+      where.status = { not: 'Prepared' };
+    }
     if (partyId) where.partyId = partyId;
     if (search) where.orderNumber = { contains: search};
     if (startDate || endDate) {
