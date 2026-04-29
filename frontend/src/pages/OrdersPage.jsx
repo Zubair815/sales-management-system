@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import api from '../services/api'
 import toast from 'react-hot-toast'
 import { useForm, useFieldArray } from 'react-hook-form'
-import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader, EmptyState, LoadingSpinner } from '../components/index.jsx'
+import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader, EmptyState, LoadingSpinner, ButtonSpinner } from '../components/index.jsx'
 import { Plus, Eye, Check, Truck, CheckCircle, XCircle, Printer, ShoppingCart, Trash2, Send } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import OrderPrintTemplate from '../components/OrderPrintTemplate.jsx'
@@ -21,6 +21,9 @@ export default function OrdersPage() {
   const [viewOrder, setViewOrder] = useState(null)
   const [printOrder, setPrintOrder] = useState(null)
   const [cancelTarget, setCancelTarget] = useState(null)
+  const [actionLoadingId, setActionLoadingId] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [confirmLoading, setConfirmLoading] = useState(false)
   const [parties, setParties] = useState([])
   const [inventory, setInventory] = useState([])
   const { register, handleSubmit, control, reset, watch, setValue, formState: { errors } } = useForm({ defaultValues: { items: [{ itemId: '', quantity: 1, unitPrice: 0 }] } })
@@ -50,30 +53,33 @@ export default function OrdersPage() {
   }
 
   const onSubmit = async (d) => {
+    setSubmitting(true)
     try {
       const items = d.items.filter(i => i.itemId).map(i => ({ itemId: i.itemId, quantity: parseInt(i.quantity), unitPrice: parseFloat(i.unitPrice) }))
-      if (!items.length) return toast.error('Add at least one item')
+      if (!items.length) { setSubmitting(false); return toast.error('Add at least one item') }
       await api.post('/orders', { partyId: d.partyId, items, notes: d.notes })
       toast.success('Order prepared and saved to drafts'); setModalOpen(false); fetch()
-    } catch (e) { toast.error(e.response?.data?.message || 'Error') }
+    } catch (e) { toast.error(e.response?.data?.message || 'Error') } finally { setSubmitting(false) }
   }
 
   const statusAction = async (id, action) => {
+    setActionLoadingId(`${action}_${id}`)
     try {
       await api.patch(`/orders/${id}/${action}`)
       toast.success(`Order ${action}d`); fetch()
       if (viewOrder) setViewOrder(null)
-    } catch (e) { toast.error(e.response?.data?.message || 'Failed') }
+    } catch (e) { toast.error(e.response?.data?.message || 'Failed') } finally { setActionLoadingId(null) }
   }
 
   // --- NEW: Submit order to admin
   const handleSubmitOrder = async (id) => {
+    setActionLoadingId(`submit_${id}`)
     try {
       await api.patch(`/orders/${id}/submit`)
       toast.success('Order submitted to Admin successfully!')
       fetch()
       if (viewOrder) setViewOrder(null)
-    } catch (e) { toast.error(e.response?.data?.message || 'Failed to submit order') }
+    } catch (e) { toast.error(e.response?.data?.message || 'Failed to submit order') } finally { setActionLoadingId(null) }
   }
 
   const openPrint = async (orderId) => {
@@ -129,11 +135,11 @@ export default function OrdersPage() {
                         <button onClick={() => openPrint(o.id)} className="p-1.5 hover:bg-gray-50 hover:text-gray-700 rounded text-gray-400" title="Print" aria-label="Print order"><Printer size={14} /></button>
                         
                         {/* New Submit Button for Salesperson */}
-                        {isSp && o.status === 'Prepared' && <button onClick={() => handleSubmitOrder(o.id)} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400" title="Submit to Admin" aria-label="Submit order to admin"><Send size={14} /></button>}
+                        {isSp && o.status === 'Prepared' && <button onClick={() => handleSubmitOrder(o.id)} disabled={actionLoadingId === `submit_${o.id}`} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400 disabled:opacity-50" title="Submit to Admin" aria-label="Submit order to admin">{actionLoadingId === `submit_${o.id}` ? <ButtonSpinner size={14} /> : <Send size={14} />}</button>}
 
-                        {canApprove && o.status === 'Pending' && <button onClick={() => statusAction(o.id, 'approve')} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400" title="Approve" aria-label="Approve order"><Check size={14} /></button>}
-                        {canApprove && o.status === 'Approved' && <button onClick={() => statusAction(o.id, 'dispatch')} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400" title="Dispatch" aria-label="Dispatch order"><Truck size={14} /></button>}
-                        {canApprove && o.status === 'Dispatched' && <button onClick={() => statusAction(o.id, 'deliver')} className="p-1.5 hover:bg-purple-50 hover:text-purple-600 rounded text-gray-400" title="Deliver" aria-label="Mark order delivered"><CheckCircle size={14} /></button>}
+                        {canApprove && o.status === 'Pending' && <button onClick={() => statusAction(o.id, 'approve')} disabled={actionLoadingId === `approve_${o.id}`} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400 disabled:opacity-50" title="Approve" aria-label="Approve order">{actionLoadingId === `approve_${o.id}` ? <ButtonSpinner size={14} /> : <Check size={14} />}</button>}
+                        {canApprove && o.status === 'Approved' && <button onClick={() => statusAction(o.id, 'dispatch')} disabled={actionLoadingId === `dispatch_${o.id}`} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400 disabled:opacity-50" title="Dispatch" aria-label="Dispatch order">{actionLoadingId === `dispatch_${o.id}` ? <ButtonSpinner size={14} /> : <Truck size={14} />}</button>}
+                        {canApprove && o.status === 'Dispatched' && <button onClick={() => statusAction(o.id, 'deliver')} disabled={actionLoadingId === `deliver_${o.id}`} className="p-1.5 hover:bg-purple-50 hover:text-purple-600 rounded text-gray-400 disabled:opacity-50" title="Deliver" aria-label="Mark order delivered">{actionLoadingId === `deliver_${o.id}` ? <ButtonSpinner size={14} /> : <CheckCircle size={14} />}</button>}
                         {(o.status === 'Pending' || o.status === 'Prepared' || (canApprove && o.status === 'Approved')) && <button onClick={() => setCancelTarget(o)} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400" title="Cancel" aria-label="Cancel order"><XCircle size={14} /></button>}
                       </div>
                     </td>
@@ -206,7 +212,7 @@ export default function OrdersPage() {
             <div className="text-sm text-gray-500">Total: <span className="text-lg font-bold text-gray-900">₹{total.toLocaleString()}</span></div>
             <div className="flex gap-3">
               <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">Cancel</button>
-              <button type="submit" className="btn-primary">Save as Draft</button>
+              <button type="submit" disabled={submitting} className="btn-primary">{submitting ? <><ButtonSpinner /> Saving...</> : 'Save as Draft'}</button>
             </div>
           </div>
         </form>
@@ -247,13 +253,13 @@ export default function OrdersPage() {
             <div className="flex gap-2 pt-2 border-t border-gray-100 flex-wrap">
               {/* Salesperson Actions */}
               {isSp && viewOrder.status === 'Prepared' && (
-                <button type="button" onClick={() => handleSubmitOrder(viewOrder.id)} className="btn-primary btn-sm"><Send size={14} /> Submit to Admin</button>
+                <button type="button" onClick={() => handleSubmitOrder(viewOrder.id)} disabled={actionLoadingId === `submit_${viewOrder.id}`} className="btn-primary btn-sm">{actionLoadingId === `submit_${viewOrder.id}` ? <><ButtonSpinner /> Submitting...</> : <><Send size={14} /> Submit to Admin</>}</button>
               )}
               
               {/* Admin Actions */}
-              {canApprove && viewOrder.status === 'Pending' && <button onClick={() => statusAction(viewOrder.id, 'approve')} className="btn-success btn-sm"><Check size={14} />Approve</button>}
-              {canApprove && viewOrder.status === 'Approved' && <button onClick={() => statusAction(viewOrder.id, 'dispatch')} className="btn-primary btn-sm"><Truck size={14} />Dispatch</button>}
-              {canApprove && viewOrder.status === 'Dispatched' && <button onClick={() => statusAction(viewOrder.id, 'deliver')} className="btn-primary btn-sm"><CheckCircle size={14} />Mark Delivered</button>}
+              {canApprove && viewOrder.status === 'Pending' && <button onClick={() => statusAction(viewOrder.id, 'approve')} disabled={actionLoadingId === `approve_${viewOrder.id}`} className="btn-success btn-sm">{actionLoadingId === `approve_${viewOrder.id}` ? <><ButtonSpinner /> Approving...</> : <><Check size={14} />Approve</>}</button>}
+              {canApprove && viewOrder.status === 'Approved' && <button onClick={() => statusAction(viewOrder.id, 'dispatch')} disabled={actionLoadingId === `dispatch_${viewOrder.id}`} className="btn-primary btn-sm">{actionLoadingId === `dispatch_${viewOrder.id}` ? <><ButtonSpinner /> Dispatching...</> : <><Truck size={14} />Dispatch</>}</button>}
+              {canApprove && viewOrder.status === 'Dispatched' && <button onClick={() => statusAction(viewOrder.id, 'deliver')} disabled={actionLoadingId === `deliver_${viewOrder.id}`} className="btn-primary btn-sm">{actionLoadingId === `deliver_${viewOrder.id}` ? <><ButtonSpinner /> Updating...</> : <><CheckCircle size={14} />Mark Delivered</>}</button>}
             </div>
           </div>
         </Modal>
@@ -269,7 +275,7 @@ export default function OrdersPage() {
         </Modal>
       )}
 
-      <ConfirmDialog open={!!cancelTarget} onClose={() => setCancelTarget(null)} onConfirm={() => { statusAction(cancelTarget.id, 'cancel'); setCancelTarget(null) }} title="Cancel Order" message={`Cancel order ${cancelTarget?.orderNumber}?`} danger />
+      <ConfirmDialog open={!!cancelTarget} onClose={() => setCancelTarget(null)} onConfirm={async () => { setConfirmLoading(true); await statusAction(cancelTarget.id, 'cancel'); setCancelTarget(null); setConfirmLoading(false) }} title="Cancel Order" message={`Cancel order ${cancelTarget?.orderNumber}?`} danger loading={confirmLoading} />
     </div>
   )
 }

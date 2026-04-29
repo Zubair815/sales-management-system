@@ -1,5 +1,10 @@
-import { X, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react'
+import { X, ChevronLeft, ChevronRight, AlertTriangle, Loader2 } from 'lucide-react'
 import Skeleton from './Skeleton.jsx'
+
+// Inline spinner for buttons
+export function ButtonSpinner({ size = 14 }) {
+  return <Loader2 size={size} className="animate-spin" />
+}
 
 // Modal
 export function Modal({ open, onClose, title, children, size = '' }) {
@@ -20,7 +25,7 @@ export function Modal({ open, onClose, title, children, size = '' }) {
 }
 
 // Confirm Dialog
-export function ConfirmDialog({ open, onClose, onConfirm, title, message, danger = false }) {
+export function ConfirmDialog({ open, onClose, onConfirm, title, message, danger = false, loading = false }) {
   if (!open) return null
   return (
     <div className="modal-backdrop">
@@ -32,9 +37,9 @@ export function ConfirmDialog({ open, onClose, onConfirm, title, message, danger
           <h3 className="text-lg font-semibold text-gray-900 text-center">{title}</h3>
           <p className="text-sm text-gray-500 text-center mt-1">{message}</p>
           <div className="flex gap-3 mt-6">
-            <button onClick={onClose} className="btn-secondary flex-1 justify-center">Cancel</button>
-            <button onClick={() => { onConfirm(); onClose(); }} className={`flex-1 justify-center btn ${danger ? 'btn-danger' : 'btn-primary'}`}>
-              Confirm
+            <button onClick={onClose} disabled={loading} className="btn-secondary flex-1 justify-center">Cancel</button>
+            <button onClick={onConfirm} disabled={loading} className={`flex-1 justify-center btn ${danger ? 'btn-danger' : 'btn-primary'}`}>
+              {loading ? <><ButtonSpinner /> Processing...</> : 'Confirm'}
             </button>
           </div>
         </div>

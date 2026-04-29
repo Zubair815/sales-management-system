@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import api from '../services/api'
 import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
-import { Modal, ConfirmDialog, Pagination, StatusBadge, PageHeader, EmptyState, FormField, LoadingSpinner } from '../components/index.jsx'
+import { Modal, ConfirmDialog, Pagination, StatusBadge, PageHeader, EmptyState, FormField, LoadingSpinner, ButtonSpinner } from '../components/index.jsx'
 import { Plus, Send, Bell, Eye, Trash2, Users, Megaphone } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -41,26 +41,31 @@ export default function AnnouncementsPage() {
   const [viewItem, setViewItem] = useState(null)
   const [sendTarget, setSendTarget] = useState(null)
   const [annToDelete, setAnnToDelete] = useState(null) // FIX: C-2
+  const [submitting, setSubmitting] = useState(false)
+  const [confirmLoading, setConfirmLoading] = useState(false)
+  const [sendingId, setSendingId] = useState(null)
   const { register, handleSubmit, reset, watch } = useForm({ defaultValues: { priority: 'Medium', targetType: 'All' } })
   const targetType = watch('targetType')
 
   const { data, setData, pagination, loading, unreadCount, setUnreadCount, refetch: fetch } = useAnnouncementsData(isSp) // FIX: L-10
 
   const onCreate = async (d) => {
+    setSubmitting(true)
     try {
       const formData = new FormData()
       Object.entries(d).forEach(([k, v]) => { if (v !== '' && v !== undefined) formData.append(k, v) })
       if (d.attachment?.[0]) formData.set('attachment', d.attachment[0])
       await api.post('/announcements', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
       toast.success('Announcement created (draft)'); setModalOpen(false); reset(); fetch()
-    } catch (e) { toast.error(e.response?.data?.message || 'Error') }
+    } catch (e) { toast.error(e.response?.data?.message || 'Error') } finally { setSubmitting(false) }
   }
 
   const sendAnnouncement = async (id) => {
+    setSendingId(id)
     try {
       const r = await api.post(`/announcements/${id}/send`)
       toast.success(`Sent to ${r.data.data.recipientCount} recipients`); setSendTarget(null); fetch()
-    } catch (e) { toast.error(e.response?.data?.message || 'Failed to send') }
+    } catch (e) { toast.error(e.response?.data?.message || 'Failed to send') } finally { setSendingId(null) }
   }
 
   const markRead = async (id) => {
@@ -72,8 +77,9 @@ export default function AnnouncementsPage() {
   }
 
   const deleteAnn = async (id) => {
-    try { await api.delete(`/announcements/${id}`); toast.success('Deleted'); fetch() }
-    catch { toast.error('Failed to delete announcement.') }
+    setConfirmLoading(true)
+    try { await api.delete(`/announcements/${id}`); toast.success('Deleted'); setAnnToDelete(null); fetch() }
+    catch { toast.error('Failed to delete announcement.') } finally { setConfirmLoading(false) }
   }
 
   // FIX: M-8 — client-side file size validation
@@ -171,7 +177,7 @@ export default function AnnouncementsPage() {
           </FormField>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" className="btn-primary">Save as Draft</button>
+            <button type="submit" disabled={submitting} className="btn-primary">{submitting ? <><ButtonSpinner /> Saving...</> : 'Save as Draft'}</button>
           </div>
         </form>
       </Modal>
@@ -191,7 +197,7 @@ export default function AnnouncementsPage() {
             <p className="text-sm text-gray-500">This will be delivered to all matching recipients instantly via real-time notification.</p>
             <div className="flex justify-end gap-3">
               <button onClick={() => setSendTarget(null)} className="btn-secondary">Cancel</button>
-              <button onClick={() => sendAnnouncement(sendTarget.id)} className="btn-primary"><Send size={16} />Send Now</button>
+              <button onClick={() => sendAnnouncement(sendTarget.id)} disabled={sendingId === sendTarget.id} className="btn-primary">{sendingId === sendTarget.id ? <><ButtonSpinner /> Sending...</> : <><Send size={16} />Send Now</>}</button>
             </div>
           </div>
         </Modal>
@@ -205,6 +211,7 @@ export default function AnnouncementsPage() {
         title="Delete Announcement"
         message="This action cannot be undone."
         danger
+        loading={confirmLoading}
       />
     </div>
   )

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react' // FIX: L-10 u
 import api from '../services/api'
 import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
-import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader, FormField, EmptyState, LoadingSpinner } from '../components/index.jsx'
+import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader, FormField, EmptyState, LoadingSpinner, ButtonSpinner } from '../components/index.jsx'
 import { Plus, Edit, Trash2, ToggleLeft, ToggleRight, Key, UserCheck } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { formatPhone } from '../utils/formatPhone'
@@ -38,6 +38,9 @@ export default function SalespersonsPage() {
   const [editItem, setEditItem] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [resetTarget, setResetTarget] = useState(null)
+  const [actionLoadingId, setActionLoadingId] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [confirmLoading, setConfirmLoading] = useState(false)
   const { register, handleSubmit, reset, formState: { errors } } = useForm()
   const { register: reg2, handleSubmit: hs2, reset: rst2, formState: { errors: err2 } } = useForm()
 
@@ -50,19 +53,22 @@ export default function SalespersonsPage() {
   const openEdit = (sp) => { setEditItem(sp); reset({ name: sp.name, email: sp.email, phone: sp.phone, region: sp.region, jobRole: sp.jobRole, targetAmount: sp.targetAmount, budgetAmount: sp.budgetAmount }); setModalOpen(true) }
 
   const onSubmit = async (d) => {
+    setSubmitting(true)
     try {
       if (editItem) await api.put(`/salespersons/${editItem.id}`, d)
       else await api.post('/salespersons', d)
       toast.success(editItem ? 'Updated' : 'Created'); setModalOpen(false); fetch()
-    } catch (e) { toast.error(e.response?.data?.message || 'Error') }
+    } catch (e) { toast.error(e.response?.data?.message || 'Error') } finally { setSubmitting(false) }
   }
 
   const toggleStatus = async (sp) => {
+    setActionLoadingId(`toggle_${sp.id}`)
     try { await api.patch(`/salespersons/${sp.id}/status`); toast.success('Status updated'); fetch() }
-    catch { toast.error('Failed to toggle status.') }
+    catch { toast.error('Failed to toggle status.') } finally { setActionLoadingId(null) }
   }
 
 const deleteSp = async () => {
+    setConfirmLoading(true)
     try { 
       await api.delete(`/salespersons/${deleteTarget.id}`); 
       toast.success('Salesperson deleted'); 
@@ -72,12 +78,13 @@ const deleteSp = async () => {
       const errorMessage = error.response?.data?.message || 'Failed to delete salesperson';
       toast.error(errorMessage);
       setDeleteTarget(null); 
-    }
+    } finally { setConfirmLoading(false) }
   }
 
   const resetPw = async (d) => {
+    setSubmitting(true)
     try { await api.patch(`/salespersons/${resetTarget.id}/reset-password`, d); toast.success('Password reset'); setResetTarget(null); rst2() }
-    catch (e) { toast.error(e.response?.data?.message || 'Error') }
+    catch (e) { toast.error(e.response?.data?.message || 'Error') } finally { setSubmitting(false) }
   }
 
   // FIX: L-11 — memoized table rows to prevent re-renders during typing
@@ -94,7 +101,7 @@ const deleteSp = async () => {
         <div className="flex flex-wrap items-center gap-1 justify-end md:justify-start">
           {/* FIX: H-4 — aria-label on all icon-only buttons */}
           {canEdit && <button aria-label="Edit salesperson" onClick={() => openEdit(sp)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400"><Edit size={14} /></button>}
-          {canCreate && <button aria-label="Toggle salesperson status" onClick={() => toggleStatus(sp)} className="p-1.5 hover:bg-yellow-50 hover:text-yellow-600 rounded text-gray-400">{sp.status === 'Active' ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}</button>}
+          {canCreate && <button aria-label="Toggle salesperson status" onClick={() => toggleStatus(sp)} disabled={actionLoadingId === `toggle_${sp.id}`} className="p-1.5 hover:bg-yellow-50 hover:text-yellow-600 rounded text-gray-400 disabled:opacity-50">{actionLoadingId === `toggle_${sp.id}` ? <ButtonSpinner size={14} /> : sp.status === 'Active' ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}</button>}
           {canCreate && <button aria-label="Reset password" onClick={() => { setResetTarget(sp); rst2() }} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400"><Key size={14} /></button>}
           {canCreate && <button aria-label="Delete salesperson" onClick={() => setDeleteTarget(sp)} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400"><Trash2 size={14} /></button>}
         </div>
@@ -163,7 +170,7 @@ const deleteSp = async () => {
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" className="btn-primary">{editItem ? 'Update' : 'Create'}</button>
+            <button type="submit" disabled={submitting} className="btn-primary">{submitting ? <><ButtonSpinner /> {editItem ? 'Updating...' : 'Creating...'}</> : editItem ? 'Update' : 'Create'}</button>
           </div>
         </form>
       </Modal>
@@ -173,11 +180,11 @@ const deleteSp = async () => {
           <FormField label="New Password" required error={err2.password?.message}>
             <input {...reg2('password', { required: 'Password is required', minLength: { value: 8, message: 'Min 8 characters' }, maxLength: { value: 12, message: 'Max 12 characters' }, pattern: { value: /^[a-zA-Z0-9]+$/, message: 'Alphanumeric only' } })} type="password" className="input" placeholder="8-12 alphanumeric" />
           </FormField>
-          <div className="flex justify-end gap-3"><button type="button" onClick={() => setResetTarget(null)} className="btn-secondary">Cancel</button><button type="submit" className="btn-primary">Reset</button></div>
+          <div className="flex justify-end gap-3"><button type="button" onClick={() => setResetTarget(null)} className="btn-secondary">Cancel</button><button type="submit" disabled={submitting} className="btn-primary">{submitting ? <><ButtonSpinner /> Resetting...</> : 'Reset'}</button></div>
         </form>
       </Modal>
 
-      <ConfirmDialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={deleteSp} title="Delete Salesperson" message={`Delete ${deleteTarget?.name}?`} danger />
+      <ConfirmDialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={deleteSp} title="Delete Salesperson" message={`Delete ${deleteTarget?.name}?`} danger loading={confirmLoading} />
     </div>
   )
 }

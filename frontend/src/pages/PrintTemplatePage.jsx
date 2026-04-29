@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import api from '../services/api'
 import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
-import { PageHeader, FormField, LoadingSpinner } from '../components/index.jsx'
+import { PageHeader, FormField, LoadingSpinner, ButtonSpinner } from '../components/index.jsx'
 import { Save, Upload, Eye, FileText } from 'lucide-react'
 
 const TEMPLATE_TYPES = [
@@ -17,6 +17,7 @@ export default function PrintTemplatePage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [logoFile, setLogoFile] = useState(null)
+  const [uploading, setUploading] = useState(false)
   const { register, handleSubmit, reset } = useForm()
 
   const loadTemplate = async (name) => {
@@ -42,13 +43,14 @@ export default function PrintTemplatePage() {
 
   const uploadLogo = async () => {
     if (!logoFile) return
+    setUploading(true)
     const formData = new FormData()
     formData.append('logo', logoFile)
     try {
       await api.post('/print/templates/logo', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
       toast.success('Logo uploaded')
       loadTemplate(active)
-    } catch { toast.error('Failed to upload logo') }
+    } catch { toast.error('Failed to upload logo') } finally { setUploading(false) }
   }
 
   return (
@@ -106,8 +108,8 @@ export default function PrintTemplatePage() {
               <div className="flex gap-2">
                 <input type="file" accept="image/*" onChange={e => setLogoFile(e.target.files[0])}
                   className="input text-xs py-1.5 flex-1" />
-                <button onClick={uploadLogo} disabled={!logoFile} className="btn-secondary">
-                  <Upload size={14} />Upload
+                <button onClick={uploadLogo} disabled={!logoFile || uploading} className="btn-secondary">
+                  {uploading ? <><ButtonSpinner /> Uploading...</> : <><Upload size={14} />Upload</>}
                 </button>
               </div>
             </div>

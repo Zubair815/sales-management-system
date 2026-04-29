@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import api from '../services/api'
 import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
-import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader, FormField, EmptyState, LoadingSpinner } from '../components/index.jsx'
+import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader, FormField, EmptyState, LoadingSpinner, ButtonSpinner } from '../components/index.jsx'
 import { Shield, ToggleLeft, ToggleRight, Key, Users, Plus, Edit, Trash2 } from 'lucide-react'
 import { formatPhone } from '../utils/formatPhone'
 import useDebounce from '../hooks/useDebounce'
@@ -17,6 +17,9 @@ export default function AdminsPage() {
   const [editAdmin, setEditAdmin] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [resetTarget, setResetTarget] = useState(null)
+  const [actionLoadingId, setActionLoadingId] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [confirmLoading, setConfirmLoading] = useState(false)
   const { register, handleSubmit, reset, formState: { errors } } = useForm()
   const { register: reg2, handleSubmit: hs2, reset: rst2, formState: { errors: err2 } } = useForm()
 
@@ -38,6 +41,7 @@ export default function AdminsPage() {
   const openEdit = (admin) => { setEditAdmin(admin); reset({ name: admin.name, email: admin.email, phone: admin.phone }); setModalOpen(true) }
 
   const onSubmit = async (data) => {
+    setSubmitting(true)
     try {
       if (editAdmin) {
         await api.put(`/super-admin/admins/${editAdmin.id}`, data)
@@ -47,17 +51,19 @@ export default function AdminsPage() {
         toast.success('Admin created')
       }
       setModalOpen(false); fetchAdmins()
-    } catch (e) { toast.error(e.response?.data?.message || 'Error') }
+    } catch (e) { toast.error(e.response?.data?.message || 'Error') } finally { setSubmitting(false) }
   }
 
   const toggleStatus = async (admin) => {
+    setActionLoadingId(`toggle_${admin.id}`)
     try {
       await api.patch(`/super-admin/admins/${admin.id}/status`)
       toast.success('Status updated'); fetchAdmins()
-    } catch { toast.error('Failed to update status') }
+    } catch { toast.error('Failed to update status') } finally { setActionLoadingId(null) }
   }
 
   const deleteAdmin = async () => {
+    setConfirmLoading(true)
     try {
       await api.delete(`/super-admin/admins/${deleteTarget.id}`)
       toast.success('Admin deleted'); 
@@ -67,14 +73,15 @@ export default function AdminsPage() {
       const errorMessage = error.response?.data?.message || 'Failed to delete admin';
       toast.error(errorMessage);
       setDeleteTarget(null);
-    }
+    } finally { setConfirmLoading(false) }
   }
 
   const resetPassword = async (data) => {
+    setSubmitting(true)
     try {
       await api.patch(`/super-admin/admins/${resetTarget.id}/reset-password`, data)
       toast.success('Password reset'); setResetTarget(null); rst2()
-    } catch (e) { toast.error(e.response?.data?.message || 'Error') }
+    } catch (e) { toast.error(e.response?.data?.message || 'Error') } finally { setSubmitting(false) }
   }
 
   return (
@@ -113,8 +120,8 @@ export default function AdminsPage() {
                         <button onClick={() => openEdit(admin)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400 transition-colors" title="Edit" aria-label="Edit admin">
                           <Edit size={15} />
                         </button>
-                        <button onClick={() => toggleStatus(admin)} className="p-1.5 hover:bg-yellow-50 hover:text-yellow-600 rounded text-gray-400 transition-colors" title="Toggle Status" aria-label="Toggle admin status">
-                          {admin.status === 'Active' ? <ToggleRight size={15} /> : <ToggleLeft size={15} />}
+                        <button onClick={() => toggleStatus(admin)} disabled={actionLoadingId === `toggle_${admin.id}`} className="p-1.5 hover:bg-yellow-50 hover:text-yellow-600 rounded text-gray-400 transition-colors disabled:opacity-50" title="Toggle Status" aria-label="Toggle admin status">
+                          {actionLoadingId === `toggle_${admin.id}` ? <ButtonSpinner size={15} /> : admin.status === 'Active' ? <ToggleRight size={15} /> : <ToggleLeft size={15} />}
                         </button>
                         <button onClick={() => { setResetTarget(admin); rst2() }} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400 transition-colors" title="Reset Password" aria-label="Reset password">
                           <Key size={15} />
@@ -152,7 +159,7 @@ export default function AdminsPage() {
           )}
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" className="btn-primary">{editAdmin ? 'Update' : 'Create'}</button>
+            <button type="submit" disabled={submitting} className="btn-primary">{submitting ? <><ButtonSpinner /> {editAdmin ? 'Updating...' : 'Creating...'}</> : editAdmin ? 'Update' : 'Create'}</button>
           </div>
         </form>
       </Modal>
@@ -165,13 +172,13 @@ export default function AdminsPage() {
           </FormField>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setResetTarget(null)} className="btn-secondary">Cancel</button>
-            <button type="submit" className="btn-primary">Reset Password</button>
+            <button type="submit" disabled={submitting} className="btn-primary">{submitting ? <><ButtonSpinner /> Resetting...</> : 'Reset Password'}</button>
           </div>
         </form>
       </Modal>
 
       <ConfirmDialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={deleteAdmin}
-        title="Delete Admin" message={`Are you sure you want to delete ${deleteTarget?.name}?`} danger />
+        title="Delete Admin" message={`Are you sure you want to delete ${deleteTarget?.name}?`} danger loading={confirmLoading} />
     </div>
   )
 }

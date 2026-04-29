@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import api from '../services/api'
 import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
-import { Modal, Pagination, StatusBadge, PageHeader, EmptyState, FormField, SearchInput, LoadingSpinner } from '../components/index.jsx'
+import { Modal, Pagination, StatusBadge, PageHeader, EmptyState, FormField, SearchInput, LoadingSpinner, ButtonSpinner } from '../components/index.jsx'
 import { Plus, Eye, Check, X, CreditCard, Printer } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import PaymentPrintTemplate from '../components/PaymentPrintTemplate.jsx'
@@ -21,6 +21,8 @@ export default function PaymentsPage() {
   const [viewItem, setViewItem] = useState(null)
   const [rejectTarget, setRejectTarget] = useState(null)
   const [printItem, setPrintItem] = useState(null)
+  const [actionLoadingId, setActionLoadingId] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
   const [parties, setParties] = useState([])
   const [orders, setOrders] = useState([])
   const { register, handleSubmit, reset } = useForm()
@@ -46,25 +48,28 @@ export default function PaymentsPage() {
   }, [isSp])
 
   const onSubmit = async (d) => {
+    setSubmitting(true)
     try {
       const formData = new FormData()
       Object.entries(d).forEach(([k, v]) => { if (v !== '' && v !== undefined) formData.append(k, v) })
       if (d.proof?.[0]) formData.set('proof', d.proof[0])
       await api.post('/payments', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
       toast.success('Payment recorded'); setModalOpen(false); reset(); fetch()
-    } catch (e) { toast.error(e.response?.data?.message || 'Error') }
+    } catch (e) { toast.error(e.response?.data?.message || 'Error') } finally { setSubmitting(false) }
   }
 
   const verify = async (id) => {
+    setActionLoadingId(`verify_${id}`)
     try { await api.patch(`/payments/${id}/verify`); toast.success('Payment verified'); fetch() }
-    catch { toast.error('Failed to verify payment.') }
+    catch { toast.error('Failed to verify payment.') } finally { setActionLoadingId(null) }
   }
 
   const reject = async (d) => {
+    setSubmitting(true)
     try {
       await api.patch(`/payments/${rejectTarget.id}/reject`, { rejectionReason: d.rejectionReason })
       toast.success('Payment rejected'); setRejectTarget(null); rst2(); fetch()
-    } catch { toast.error('Failed to reject payment.') }
+    } catch { toast.error('Failed to reject payment.') } finally { setSubmitting(false) }
   }
 
   const openPrint = async (payment) => {
@@ -112,11 +117,11 @@ export default function PaymentsPage() {
                       <div className="flex flex-wrap gap-1 justify-end md:justify-start">
                         <button onClick={() => setViewItem(p)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400" aria-label="View payment"><Eye size={14} /></button>
                         <button onClick={() => openPrint(p)} className="p-1.5 hover:bg-gray-50 hover:text-gray-700 rounded text-gray-400" aria-label="Print receipt"><Printer size={14} /></button>
-                        {canVerify && p.status === 'Pending' && (
-                          <>
-                            <button onClick={() => verify(p.id)} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400" aria-label="Verify payment"><Check size={14} /></button>
-                            <button onClick={() => { setRejectTarget(p); rst2() }} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400" aria-label="Reject payment"><X size={14} /></button>
-                          </>
+                          {canVerify && p.status === 'Pending' && (
+                            <>
+                              <button onClick={() => verify(p.id)} disabled={actionLoadingId === `verify_${p.id}`} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400 disabled:opacity-50" aria-label="Verify payment">{actionLoadingId === `verify_${p.id}` ? <ButtonSpinner size={14} /> : <Check size={14} />}</button>
+                              <button onClick={() => { setRejectTarget(p); rst2() }} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400" aria-label="Reject payment"><X size={14} /></button>
+                            </>
                         )}
                       </div>
                     </td>
@@ -169,7 +174,7 @@ export default function PaymentsPage() {
           </FormField>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" className="btn-primary">Record Payment</button>
+            <button type="submit" disabled={submitting} className="btn-primary">{submitting ? <><ButtonSpinner /> Recording...</> : 'Record Payment'}</button>
           </div>
         </form>
       </Modal>
@@ -183,7 +188,7 @@ export default function PaymentsPage() {
           </FormField>
           <div className="flex justify-end gap-3">
             <button type="button" onClick={() => setRejectTarget(null)} className="btn-secondary">Cancel</button>
-            <button type="submit" className="btn-danger">Reject</button>
+            <button type="submit" disabled={submitting} className="btn-danger">{submitting ? <><ButtonSpinner /> Rejecting...</> : 'Reject'}</button>
           </div>
         </form>
       </Modal>

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import api from '../services/api'
 import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
-import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader, FormField, EmptyState, LoadingSpinner } from '../components/index.jsx'
+import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader, FormField, EmptyState, LoadingSpinner, ButtonSpinner } from '../components/index.jsx'
 import { Plus, Edit, Trash2, Package, AlertTriangle, PlusCircle, MinusCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import useDebounce from '../hooks/useDebounce'
@@ -19,6 +19,8 @@ export default function InventoryPage() {
   const [editItem, setEditItem] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [stockTarget, setStockTarget] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [confirmLoading, setConfirmLoading] = useState(false)
   const { register, handleSubmit, reset, formState: { errors } } = useForm()
   const { register: reg2, handleSubmit: hs2, reset: rst2 } = useForm()
 
@@ -38,22 +40,25 @@ export default function InventoryPage() {
   const openEdit = (item) => { setEditItem(item); reset({ ...item, costPrice: item.costPrice || '', sellingPrice: item.sellingPrice }); setModalOpen(true) }
 
   const onSubmit = async (d) => {
+    setSubmitting(true)
     try {
       if (editItem) await api.put(`/inventory/${editItem.id}`, d)
       else await api.post('/inventory', d)
       toast.success(editItem ? 'Updated' : 'Created'); setModalOpen(false); fetch()
-    } catch (e) { toast.error(e.response?.data?.message || 'Error') }
+    } catch (e) { toast.error(e.response?.data?.message || 'Error') } finally { setSubmitting(false) }
   }
 
   const deleteItem = async () => {
-    try { await api.delete(`/inventory/${deleteTarget.id}`); toast.success('Deleted'); setDeleteTarget(null); fetch() } catch { toast.error('Failed to delete item.') }
+    setConfirmLoading(true)
+    try { await api.delete(`/inventory/${deleteTarget.id}`); toast.success('Deleted'); setDeleteTarget(null); fetch() } catch { toast.error('Failed to delete item.') } finally { setConfirmLoading(false) }
   }
 
   const adjustStock = async (d) => {
+    setSubmitting(true)
     try {
       await api.patch(`/inventory/${stockTarget.id}/stock`, { adjustment: parseInt(d.adjustment), reason: d.reason })
       toast.success('Stock adjusted'); setStockTarget(null); rst2(); fetch()
-    } catch (e) { toast.error(e.response?.data?.message || 'Error') }
+    } catch (e) { toast.error(e.response?.data?.message || 'Error') } finally { setSubmitting(false) }
   }
 
   return (
@@ -128,7 +133,7 @@ export default function InventoryPage() {
           <FormField label="Description"><textarea {...register('description')} className="input" rows={2} /></FormField>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" className="btn-primary">{editItem ? 'Update' : 'Create'}</button>
+            <button type="submit" disabled={submitting} className="btn-primary">{submitting ? <><ButtonSpinner /> {editItem ? 'Updating...' : 'Creating...'}</> : editItem ? 'Update' : 'Create'}</button>
           </div>
         </form>
       </Modal>
@@ -142,12 +147,12 @@ export default function InventoryPage() {
           <FormField label="Reason"><input {...reg2('reason')} className="input" placeholder="Stock received, damaged..." /></FormField>
           <div className="flex justify-end gap-3">
             <button type="button" onClick={() => setStockTarget(null)} className="btn-secondary">Cancel</button>
-            <button type="submit" className="btn-primary">Apply Adjustment</button>
+            <button type="submit" disabled={submitting} className="btn-primary">{submitting ? <><ButtonSpinner /> Applying...</> : 'Apply Adjustment'}</button>
           </div>
         </form>
       </Modal>
 
-      <ConfirmDialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={deleteItem} title="Delete Item" message={`Delete ${deleteTarget?.name}?`} danger />
+      <ConfirmDialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={deleteItem} title="Delete Item" message={`Delete ${deleteTarget?.name}?`} danger loading={confirmLoading} />
     </div>
   )
 }

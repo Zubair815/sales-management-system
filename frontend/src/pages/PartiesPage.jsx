@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import api from '../services/api'
 import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
-import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader, FormField, EmptyState, LoadingSpinner } from '../components/index.jsx'
+import { Modal, ConfirmDialog, Pagination, StatusBadge, SearchInput, PageHeader, FormField, EmptyState, LoadingSpinner, ButtonSpinner } from '../components/index.jsx'
 import { Plus, Edit, Trash2, ToggleRight, ToggleLeft, Building2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { formatPhone } from '../utils/formatPhone'
@@ -20,6 +20,9 @@ export function PartiesPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editItem, setEditItem] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [actionLoadingId, setActionLoadingId] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [confirmLoading, setConfirmLoading] = useState(false)
   const { register, handleSubmit, reset, formState: { errors } } = useForm()
 
   const debouncedSearch = useDebounce(search, 500)
@@ -38,19 +41,22 @@ export function PartiesPage() {
   const openEdit = (item) => { setEditItem(item); reset(item); setModalOpen(true) }
 
   const onSubmit = async (d) => {
+    setSubmitting(true)
     try {
       if (editItem) await api.put(`/parties/${editItem.id}`, d)
       else await api.post('/parties', d)
       toast.success(editItem ? 'Updated' : 'Created'); setModalOpen(false); fetch()
-    } catch (e) { toast.error(e.response?.data?.message || 'Error') }
+    } catch (e) { toast.error(e.response?.data?.message || 'Error') } finally { setSubmitting(false) }
   }
 
   const toggleStatus = async (item) => {
-    try { await api.patch(`/parties/${item.id}/status`); toast.success('Status updated'); fetch() } catch { toast.error('Failed to toggle party status.') }
+    setActionLoadingId(`toggle_${item.id}`)
+    try { await api.patch(`/parties/${item.id}/status`); toast.success('Status updated'); fetch() } catch { toast.error('Failed to toggle party status.') } finally { setActionLoadingId(null) }
   }
 
   const deleteItem = async () => {
-    try { await api.delete(`/parties/${deleteTarget.id}`); toast.success('Party deleted'); setDeleteTarget(null); fetch() } catch { toast.error('Failed to delete party.') }
+    setConfirmLoading(true)
+    try { await api.delete(`/parties/${deleteTarget.id}`); toast.success('Party deleted'); setDeleteTarget(null); fetch() } catch { toast.error('Failed to delete party.') } finally { setConfirmLoading(false) }
   }
 
   return (
@@ -79,7 +85,7 @@ export function PartiesPage() {
                       <td data-label="Actions" data-cell="actions">
                         <div className="flex flex-wrap gap-1 justify-end md:justify-start">
                           <button onClick={() => openEdit(p)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400" aria-label="Edit party"><Edit size={14} /></button>
-                          {canCreate && <button onClick={() => toggleStatus(p)} className="p-1.5 hover:bg-yellow-50 hover:text-yellow-600 rounded text-gray-400" aria-label="Toggle party status">{p.status === 'Active' ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}</button>}
+                          {canCreate && <button onClick={() => toggleStatus(p)} disabled={actionLoadingId === `toggle_${p.id}`} className="p-1.5 hover:bg-yellow-50 hover:text-yellow-600 rounded text-gray-400 disabled:opacity-50" aria-label="Toggle party status">{actionLoadingId === `toggle_${p.id}` ? <ButtonSpinner size={14} /> : p.status === 'Active' ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}</button>}
                           {canCreate && <button onClick={() => setDeleteTarget(p)} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400" aria-label="Delete party"><Trash2 size={14} /></button>}
                         </div>
                       </td>
@@ -113,12 +119,12 @@ export function PartiesPage() {
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" className="btn-primary">{editItem ? 'Update' : 'Create'}</button>
+            <button type="submit" disabled={submitting} className="btn-primary">{submitting ? <><ButtonSpinner /> {editItem ? 'Updating...' : 'Creating...'}</> : editItem ? 'Update' : 'Create'}</button>
           </div>
         </form>
       </Modal>
 
-      <ConfirmDialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={deleteItem} title="Delete Party" message={`Delete ${deleteTarget?.name}?`} danger />
+      <ConfirmDialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={deleteItem} title="Delete Party" message={`Delete ${deleteTarget?.name}?`} danger loading={confirmLoading} />
     </div>
   )
 }

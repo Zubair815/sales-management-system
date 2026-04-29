@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import api from '../services/api'
 import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
-import { Modal, ConfirmDialog, Pagination, StatusBadge, PageHeader, EmptyState, FormField, SearchInput, LoadingSpinner } from '../components/index.jsx'
+import { Modal, ConfirmDialog, Pagination, StatusBadge, PageHeader, EmptyState, FormField, SearchInput, LoadingSpinner, ButtonSpinner } from '../components/index.jsx'
 import { Plus, Eye, Check, X, Receipt, Paperclip, Send, ArrowLeft } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import MonthlyExpensePrintTemplate from '../components/MonthlyExpensePrintTemplate'
@@ -29,6 +29,8 @@ export default function ExpensesPage() {
   const [printData, setPrintData] = useState(null)
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false)
   const [bulkApproveConfirmOpen, setBulkApproveConfirmOpen] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [actionLoadingId, setActionLoadingId] = useState(null)
   
   const { register, handleSubmit, reset, formState: { errors } } = useForm()
   const { register: reg2, handleSubmit: hs2, reset: rst2 } = useForm()
@@ -66,13 +68,14 @@ export default function ExpensesPage() {
 
   // --- ACTIONS ---
   const onSubmit = async (d) => {
+    setSubmitting(true)
     try {
       const formData = new FormData()
       Object.entries(d).forEach(([k, v]) => { if (v !== undefined && v !== '') formData.append(k, v) })
       if (d.proof?.[0]) formData.set('proof', d.proof[0])
       await api.post('/expenses', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
       toast.success('Expense saved as draft'); setModalOpen(false); reset(); fetchData()
-    } catch (e) { toast.error(e.response?.data?.message || 'Error') }
+    } catch (e) { toast.error(e.response?.data?.message || 'Error') } finally { setSubmitting(false) }
   }
 
   const submitMonthlyReport = async () => {
@@ -107,6 +110,7 @@ export default function ExpensesPage() {
 
   // --- UPDATED ACTIONS WITH ERROR HANDLING ---
   const approveExpense = async (d) => {
+    setSubmitting(true)
     try { 
       await api.patch(`/expenses/${actionTarget.id}/approve`, { remarks: d.remarks }); 
       toast.success('Approved'); 
@@ -115,10 +119,11 @@ export default function ExpensesPage() {
       fetchData() 
     } catch (error) { 
       toast.error(error.response?.data?.message || 'Failed to approve expense');
-    }
+    } finally { setSubmitting(false) }
   }
 
   const rejectExpense = async (d) => {
+    setSubmitting(true)
     try { 
       await api.patch(`/expenses/${actionTarget.id}/reject`, { rejectionReason: d.rejectionReason }); 
       toast.success('Rejected'); 
@@ -127,7 +132,7 @@ export default function ExpensesPage() {
       fetchData() 
     } catch (error) { 
       toast.error(error.response?.data?.message || 'Failed to reject expense');
-    }
+    } finally { setSubmitting(false) }
   }
 
   // --- NEW: Bulk Approve Function ---
@@ -146,14 +151,16 @@ export default function ExpensesPage() {
   };
 
   const toggleTypeStatus = async (type) => {
+    setActionLoadingId(`type_${type.id}`)
     const newStatus = type.status === 'Active' ? 'Inactive' : 'Active';
     try { await api.put(`/expenses/types/${type.id}`, { status: newStatus }); toast.success(`Marked as ${newStatus}`); fetchExpenseTypes(); } 
-    catch { toast.error('Failed to update expense type status.'); }
+    catch { toast.error('Failed to update expense type status.'); } finally { setActionLoadingId(null) }
   };
 
   const createType = async (d) => {
+    setSubmitting(true)
     try { await api.post('/expenses/types', d); toast.success('Type created'); setTypeModalOpen(false); rst2(); fetchExpenseTypes(); }
-    catch (e) { toast.error(e.response?.data?.message || 'Error') }
+    catch (e) { toast.error(e.response?.data?.message || 'Error') } finally { setSubmitting(false) }
   }
 
   const canManageTypes = hasPermission('ExpenseTypeManagement', 'FullAccess') || user.role === 'SuperAdmin'
@@ -328,7 +335,7 @@ export default function ExpensesPage() {
           </FormField>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" className="btn-primary">Save as Draft</button>
+            <button type="submit" disabled={submitting} className="btn-primary">{submitting ? <><ButtonSpinner /> Saving...</> : 'Save as Draft'}</button>
           </div>
         </form>
       </Modal>
@@ -350,8 +357,8 @@ export default function ExpensesPage() {
             )}
             <div className="flex justify-end gap-3">
               <button type="button" onClick={() => setActionTarget(null)} className="btn-secondary">Cancel</button>
-              <button type="submit" className={actionTarget.action === 'approve' ? 'btn-success' : 'btn-danger'}>
-                {actionTarget.action === 'approve' ? 'Approve' : 'Reject'}
+              <button type="submit" disabled={submitting} className={actionTarget.action === 'approve' ? 'btn-success' : 'btn-danger'}>
+                {submitting ? <><ButtonSpinner /> {actionTarget.action === 'approve' ? 'Approving...' : 'Rejecting...'}</> : actionTarget.action === 'approve' ? 'Approve' : 'Reject'}
               </button>
             </div>
           </form>
@@ -372,9 +379,10 @@ export default function ExpensesPage() {
                 <button 
                   type="button" 
                   onClick={() => toggleTypeStatus(t)}
-                  className={`text-xs px-3 py-1.5 rounded font-medium transition-colors ${t.status === 'Active' ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}
+                  disabled={actionLoadingId === `type_${t.id}`}
+                  className={`text-xs px-3 py-1.5 rounded font-medium transition-colors disabled:opacity-50 ${t.status === 'Active' ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}
                 >
-                  {t.status === 'Active' ? 'Deactivate' : 'Activate'}
+                  {actionLoadingId === `type_${t.id}` ? <ButtonSpinner size={12} /> : t.status === 'Active' ? 'Deactivate' : 'Activate'}
                 </button>
               </div>
             </div>
@@ -384,7 +392,7 @@ export default function ExpensesPage() {
           <h4 className="font-medium text-sm">Add New Type</h4>
           <FormField label="Name"><input {...reg2('name', { required: 'Type name is required' })} className="input" placeholder="Travel, Food..." /></FormField>
           <FormField label="Description"><input {...reg2('description')} className="input" /></FormField>
-          <button type="submit" className="btn-primary w-full justify-center">Add Type</button>
+          <button type="submit" disabled={submitting} className="btn-primary w-full justify-center">{submitting ? <><ButtonSpinner /> Adding...</> : 'Add Type'}</button>
         </form>
       </Modal>
 
