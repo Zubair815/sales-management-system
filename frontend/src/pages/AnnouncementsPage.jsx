@@ -1,27 +1,22 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import api from '../services/api'
 import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
-import { Modal, Pagination, StatusBadge, PageHeader, EmptyState, FormField } from '../components/index.jsx'
+import { Modal, ConfirmDialog, Pagination, StatusBadge, PageHeader, EmptyState, FormField } from '../components/index.jsx'
 import { Plus, Send, Bell, Eye, Trash2, Users, Megaphone } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
-export default function AnnouncementsPage() {
-  const { user, hasPermission } = useAuth()
-  const isSp = user.role === 'Salesperson'
-  const canCreate = hasPermission('Announcements', 'FullAccess') || user.role === 'SuperAdmin'
+// FIX: L-10 — extracted data fetching into a dedicated custom hook
+function useAnnouncementsData(isSp) {
   const [data, setData] = useState([])
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1 })
   const [loading, setLoading] = useState(true)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [viewItem, setViewItem] = useState(null)
-  const [sendTarget, setSendTarget] = useState(null)
+  const [error, setError] = useState(null)
   const [unreadCount, setUnreadCount] = useState(0)
-  const { register, handleSubmit, reset, watch } = useForm({ defaultValues: { priority: 'Medium', targetType: 'All' } })
-  const targetType = watch('targetType')
 
-  const fetch = async (page = 1) => {
+  const refetch = useCallback(async (page = 1) => {
     setLoading(true)
+    setError(null)
     try {
       if (isSp) {
         const r = await api.get('/announcements/inbox', { params: { page, limit: 20 } })
@@ -31,9 +26,25 @@ export default function AnnouncementsPage() {
         setData(r.data.data); setPagination(r.data.pagination)
       }
     } catch { toast.error('Failed') } finally { setLoading(false) }
-  }
+  }, [isSp])
 
-  useEffect(() => { fetch() }, [isSp])
+  useEffect(() => { refetch() }, [refetch])
+
+  return { data, setData, pagination, loading, error, unreadCount, setUnreadCount, refetch }
+}
+
+export default function AnnouncementsPage() {
+  const { user, hasPermission } = useAuth()
+  const isSp = user.role === 'Salesperson'
+  const canCreate = hasPermission('Announcements', 'FullAccess') || user.role === 'SuperAdmin'
+  const [modalOpen, setModalOpen] = useState(false)
+  const [viewItem, setViewItem] = useState(null)
+  const [sendTarget, setSendTarget] = useState(null)
+  const [annToDelete, setAnnToDelete] = useState(null) // FIX: C-2
+  const { register, handleSubmit, reset, watch } = useForm({ defaultValues: { priority: 'Medium', targetType: 'All' } })
+  const targetType = watch('targetType')
+
+  const { data, setData, pagination, loading, unreadCount, setUnreadCount, refetch: fetch } = useAnnouncementsData(isSp) // FIX: L-10
 
   const onCreate = async (d) => {
     try {
@@ -57,12 +68,21 @@ export default function AnnouncementsPage() {
       await api.post(`/announcements/${id}/read`)
       setData(prev => prev.map(a => a.id === id ? { ...a, isRead: true } : a))
       setUnreadCount(prev => Math.max(0, prev - 1))
-    } catch {}
+    } catch (e) { toast.error('Could not mark as read. Please try again.'); console.error(e) } // FIX: C-3
   }
 
   const deleteAnn = async (id) => {
     try { await api.delete(`/announcements/${id}`); toast.success('Deleted'); fetch() }
     catch { toast.error('Failed') }
+  }
+
+  // FIX: M-8 — client-side file size validation
+  const handleAttachmentChange = (e) => {
+    const file = e.target.files?.[0]
+    if (file && file.size > 5 * 1024 * 1024) {
+      toast.error('File exceeds 5 MB limit.')
+      e.target.value = ''
+    }
   }
 
   const PRIORITIES = ['High', 'Medium', 'Low']
@@ -103,9 +123,10 @@ export default function AnnouncementsPage() {
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   {!isSp && ann.status === 'Draft' && canCreate && (
-                    <button onClick={e => { e.stopPropagation(); setSendTarget(ann) }} className="btn-primary btn-sm"><Send size={13} />Send</button>
+                    <button aria-label="Send announcement" onClick={e => { e.stopPropagation(); setSendTarget(ann) }} className="btn-primary btn-sm"><Send size={13} />Send</button>
                   )}
-                  {!isSp && canCreate && <button onClick={e => { e.stopPropagation(); deleteAnn(ann.id) }} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400"><Trash2 size={14} /></button>}
+                  {/* FIX: C-2 — route through confirmation state; FIX: H-4 — aria-label */}
+                  {!isSp && canCreate && <button aria-label="Delete announcement" onClick={e => { e.stopPropagation(); setAnnToDelete(ann) }} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400"><Trash2 size={14} /></button>}
                 </div>
               </div>
             </div>
@@ -144,7 +165,9 @@ export default function AnnouncementsPage() {
             <input {...register('expiryDate')} type="date" className="input" />
           </FormField>
           <FormField label="Attachment (optional)">
-            <input {...register('attachment')} type="file" className="input py-1.5 text-xs" />
+            {/* FIX: M-8 — accept filter + onChange size check */}
+            <input {...register('attachment')} type="file" className="input py-1.5 text-xs" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" onChange={handleAttachmentChange} />
+            <p className="text-xs text-gray-400 mt-1">Accepted: PDF, Word, JPG, PNG · Max size: 5 MB</p>
           </FormField>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">Cancel</button>
@@ -173,6 +196,16 @@ export default function AnnouncementsPage() {
           </div>
         </Modal>
       )}
+
+      {/* FIX: C-2 — delete confirmation dialog */}
+      <ConfirmDialog
+        open={!!annToDelete}
+        onClose={() => setAnnToDelete(null)}
+        onConfirm={() => deleteAnn(annToDelete.id)}
+        title="Delete Announcement"
+        message="This action cannot be undone."
+        danger
+      />
     </div>
   )
 }

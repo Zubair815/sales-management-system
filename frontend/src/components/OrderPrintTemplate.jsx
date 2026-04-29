@@ -1,7 +1,12 @@
 import React from 'react';
 
 export default function OrderPrintTemplate({ data }) {
-  if (!data) return null;
+  // FIX: M-9 — show a user-visible message instead of returning blank/null
+  if (!data) return (
+    <div style={{ padding: 32, fontFamily: 'sans-serif' }}>
+      <p>No order data available to print.</p>
+    </div>
+  );
   const { order: o, template: co = {} } = data;
 
   const itemsList = o.orderItems || o.items || [];

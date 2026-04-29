@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react' // FIX: L-10 useCallback, L-11 useMemo
 import api from '../services/api'
 import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
@@ -8,14 +8,32 @@ import { useAuth } from '../contexts/AuthContext'
 import { formatPhone } from '../utils/formatPhone'
 import useDebounce from '../hooks/useDebounce'
 
+// FIX: L-10 — extracted data fetching into a dedicated custom hook
+function useSalespersonsData(debouncedSearch) {
+  const [data, setData] = useState([])
+  const [pagination, setPagination] = useState({ page: 1, totalPages: 1 })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  const refetch = useCallback(async (page = 1) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const r = await api.get('/salespersons', { params: { page, limit: 10, search: debouncedSearch } })
+      setData(r.data.data); setPagination(r.data.pagination)
+    } catch { toast.error('Failed to load') } finally { setLoading(false) }
+  }, [debouncedSearch])
+
+  useEffect(() => { refetch() }, [refetch])
+
+  return { data, pagination, loading, error, refetch }
+}
+
 export default function SalespersonsPage() {
   const { hasPermission } = useAuth()
   const canEdit = hasPermission('SalespersonManagement', 'ViewEdit')
   const canCreate = hasPermission('SalespersonManagement', 'FullAccess')
-  const [data, setData] = useState([])
-  const [pagination, setPagination] = useState({ page: 1, totalPages: 1 })
   const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [editItem, setEditItem] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
@@ -25,15 +43,8 @@ export default function SalespersonsPage() {
 
   const debouncedSearch = useDebounce(search, 500)
 
-  const fetch = async (page = 1) => {
-    setLoading(true)
-    try {
-      const r = await api.get('/salespersons', { params: { page, limit: 10, search: debouncedSearch } })
-      setData(r.data.data); setPagination(r.data.pagination)
-    } catch { toast.error('Failed to load') } finally { setLoading(false) }
-  }
-
-  useEffect(() => { fetch() }, [debouncedSearch])
+  // FIX: L-10 — single hook call replaces useState+useEffect+fetch
+  const { data, pagination, loading, refetch: fetch } = useSalespersonsData(debouncedSearch)
 
   const openCreate = () => { setEditItem(null); reset({}); setModalOpen(true) }
   const openEdit = (sp) => { setEditItem(sp); reset({ name: sp.name, email: sp.email, phone: sp.phone, region: sp.region, jobRole: sp.jobRole, targetAmount: sp.targetAmount, budgetAmount: sp.budgetAmount }); setModalOpen(true) }
@@ -69,6 +80,28 @@ const deleteSp = async () => {
     catch (e) { toast.error(e.response?.data?.message || 'Error') }
   }
 
+  // FIX: L-11 — memoized table rows to prevent re-renders during typing
+  const tableRows = useMemo(() => data.map(sp => (
+    <tr key={sp.id}>
+      <td data-label="Employee ID" className="font-mono text-xs text-blue-700 font-semibold">{sp.employeeId}</td>
+      <td data-label="Name" className="font-medium">{sp.name}</td>
+      <td data-label="Phone" className="text-gray-500">{formatPhone(sp.phone)}</td>
+      <td data-label="Region" className="text-gray-500">{sp.region || '-'}</td>
+      <td data-label="Role" className="text-gray-500 text-xs">{sp.jobRole || '-'}</td>
+      <td data-label="Status"><StatusBadge status={sp.status} /></td>
+      <td data-label="Target" className="text-gray-500">{sp.targetAmount ? `₹${Number(sp.targetAmount).toLocaleString()}` : '-'}</td>
+      <td data-label="Actions" data-cell="actions">
+        <div className="flex flex-wrap items-center gap-1 justify-end md:justify-start">
+          {/* FIX: H-4 — aria-label on all icon-only buttons */}
+          {canEdit && <button aria-label="Edit salesperson" onClick={() => openEdit(sp)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400"><Edit size={14} /></button>}
+          {canCreate && <button aria-label="Toggle salesperson status" onClick={() => toggleStatus(sp)} className="p-1.5 hover:bg-yellow-50 hover:text-yellow-600 rounded text-gray-400">{sp.status === 'Active' ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}</button>}
+          {canCreate && <button aria-label="Reset password" onClick={() => { setResetTarget(sp); rst2() }} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400"><Key size={14} /></button>}
+          {canCreate && <button aria-label="Delete salesperson" onClick={() => setDeleteTarget(sp)} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400"><Trash2 size={14} /></button>}
+        </div>
+      </td>
+    </tr>
+  )), [data, canEdit, canCreate]) // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div>
       <PageHeader title="Salespersons" subtitle={`${pagination?.total ?? 0} total`}
@@ -83,25 +116,7 @@ const deleteSp = async () => {
             <table className="table responsive-table">
               <thead><tr><th>Employee ID</th><th>Name</th><th>Phone</th><th>Region</th><th>Role</th><th>Status</th><th>Target</th><th>Actions</th></tr></thead>
               <tbody>
-                {data.map(sp => (
-                  <tr key={sp.id}>
-                    <td data-label="Employee ID" className="font-mono text-xs text-blue-700 font-semibold">{sp.employeeId}</td>
-                    <td data-label="Name" className="font-medium">{sp.name}</td>
-                    <td data-label="Phone" className="text-gray-500">{formatPhone(sp.phone)}</td>
-                    <td data-label="Region" className="text-gray-500">{sp.region || '-'}</td>
-                    <td data-label="Role" className="text-gray-500 text-xs">{sp.jobRole || '-'}</td>
-                    <td data-label="Status"><StatusBadge status={sp.status} /></td>
-                    <td data-label="Target" className="text-gray-500">{sp.targetAmount ? `₹${Number(sp.targetAmount).toLocaleString()}` : '-'}</td>
-                    <td data-label="Actions" data-cell="actions">
-                      <div className="flex flex-wrap items-center gap-1 justify-end md:justify-start">
-                        {canEdit && <button onClick={() => openEdit(sp)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400"><Edit size={14} /></button>}
-                        {canCreate && <button onClick={() => toggleStatus(sp)} className="p-1.5 hover:bg-yellow-50 hover:text-yellow-600 rounded text-gray-400">{sp.status === 'Active' ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}</button>}
-                        {canCreate && <button onClick={() => { setResetTarget(sp); rst2() }} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400"><Key size={14} /></button>}
-                        {canCreate && <button onClick={() => setDeleteTarget(sp)} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400"><Trash2 size={14} /></button>}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {tableRows}
               </tbody>
             </table>
           </div>
@@ -128,7 +143,8 @@ const deleteSp = async () => {
             </FormField>
             {!editItem && (
               <FormField label="Password" required error={errors.password?.message}>
-                <input {...register('password', { required: true, minLength: 8, maxLength: 12, pattern: /^[a-zA-Z0-9]+$/ })} type="password" className="input" />
+                {/* FIX: H-6 — descriptive placeholder and clear pattern error message */}
+                <input {...register('password', { required: 'Password is required', pattern: { value: /^[a-zA-Z0-9]{8,12}$/, message: 'Password must be 8–12 alphanumeric characters (letters and numbers only).' } })} type="password" className="input" placeholder="8–12 alphanumeric characters only" />
               </FormField>
             )}
             <FormField label="Region" error={errors.region?.message}>
@@ -137,8 +153,9 @@ const deleteSp = async () => {
             <FormField label="Job Role">
               <input {...register('jobRole')} className="input" placeholder="Sales Executive" />
             </FormField>
-            <FormField label="Target Amount">
-              <input {...register('targetAmount')} type="number" className="input" placeholder="500000" />
+            {/* FIX: H-5 — targetAmount validation: required + min:0 + valueAsNumber + error display */}
+            <FormField label="Target Amount" required error={errors.targetAmount?.message}>
+              <input {...register('targetAmount', { required: 'Target amount is required', min: { value: 0, message: 'Amount must be 0 or greater' }, valueAsNumber: true })} type="number" className="input" placeholder="500000" />
             </FormField>
             <FormField label="Budget Amount">
               <input {...register('budgetAmount')} type="number" className="input" placeholder="20000" />
