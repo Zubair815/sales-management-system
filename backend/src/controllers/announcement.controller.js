@@ -166,10 +166,16 @@ const getSalespersonAnnouncements = async (req, res) => {
     const spId = req.user.id;
 
     const where = {
-      deletedAt: null, status: 'Sent',
+      status: { in: ['Sent', 'Deleted'] },
       recipients: { some: { salespersonId: spId } },
+      OR: [
+        { deletedAt: null },
+        { reads: { some: { salespersonId: spId } } }
+      ]
     };
-    if (unreadOnly === 'true') where.reads = { none: { salespersonId: spId } };
+    if (unreadOnly === 'true') {
+      where.reads = { none: { salespersonId: spId } };
+    }
 
     const [anns, total] = await Promise.all([
       prisma.announcement.findMany({
