@@ -144,15 +144,22 @@ export default function AnnouncementsPage() {
                   <p className="text-sm text-gray-600 mt-1 line-clamp-2">{ann.message}</p>
                   <p className="text-xs text-gray-400 mt-2">{new Date(ann.createdAt).toLocaleString()}{ann.createdBy && ` · ${ann.createdBy.name}`}</p>
                   {!isSp && ann._count && (
-                    <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                      <Users size={12} />{ann._count.reads}/{ann._count.recipients} read
-                    </p>
+                    <div className="mt-1">
+                      <p className="text-xs text-gray-500 flex items-center gap-1">
+                        <Users size={12} />{ann._count.reads}/{ann._count.recipients} read
+                      </p>
+                      {ann.reads && ann.reads.length > 0 && (
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Read by: {ann.reads.map(r => r.salesperson?.name || 'Unknown').join(', ')}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   {!isSp && ann.status === 'Draft' && canCreate && (
                     <>
-                      <button aria-label="Edit announcement" onClick={e => { e.stopPropagation(); openEditModal(ann) }} className="p-1.5 hover:bg-gray-100 hover:text-gray-800 rounded text-gray-500"><Edit size={14} /></button>
+                      <button aria-label="Edit announcement" onClick={e => { e.stopPropagation(); openEditModal(ann) }} className="btn-secondary btn-sm">Edit</button>
                       <button aria-label="Send announcement" onClick={e => { e.stopPropagation(); setSendTarget(ann) }} className="btn-primary btn-sm ml-1"><Send size={13} />Send</button>
                     </>
                   )}

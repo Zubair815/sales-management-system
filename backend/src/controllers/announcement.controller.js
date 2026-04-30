@@ -15,6 +15,7 @@ const getAdminAnnouncements = async (req, res) => {
         include: {
           createdBy: { select: { name: true } },
           _count: { select: { reads: true, recipients: true } },
+          reads: { include: { salesperson: { select: { name: true } } } },
         },
         orderBy: { createdAt: 'desc' },
       }),
