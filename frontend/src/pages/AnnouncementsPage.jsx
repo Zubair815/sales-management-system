@@ -3,7 +3,7 @@ import api from '../services/api'
 import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
 import { Modal, ConfirmDialog, Pagination, StatusBadge, PageHeader, EmptyState, FormField, LoadingSpinner, ButtonSpinner } from '../components/index.jsx'
-import { Plus, Send, Bell, Eye, Trash2, Users, Megaphone } from 'lucide-react'
+import { Plus, Send, Bell, Eye, Trash2, Users, Megaphone, Edit } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
 // FIX: L-10 — extracted data fetching into a dedicated custom hook
@@ -44,20 +44,42 @@ export default function AnnouncementsPage() {
   const [submitting, setSubmitting] = useState(false)
   const [confirmLoading, setConfirmLoading] = useState(false)
   const [sendingId, setSendingId] = useState(null)
-  const { register, handleSubmit, reset, watch } = useForm({ defaultValues: { priority: 'Medium', targetType: 'All' } })
+  const [editId, setEditId] = useState(null)
+  const { register, handleSubmit, reset, watch, setValue } = useForm({ defaultValues: { priority: 'Medium', targetType: 'All' } })
   const targetType = watch('targetType')
 
   const { data, setData, pagination, loading, unreadCount, setUnreadCount, refetch: fetch } = useAnnouncementsData(isSp) // FIX: L-10
 
-  const onCreate = async (d) => {
+  const onSubmitData = async (d) => {
     setSubmitting(true)
     try {
       const formData = new FormData()
       Object.entries(d).forEach(([k, v]) => { if (v !== '' && v !== undefined) formData.append(k, v) })
       if (d.attachment?.[0]) formData.set('attachment', d.attachment[0])
-      await api.post('/announcements', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
-      toast.success('Announcement created (draft)'); setModalOpen(false); reset(); fetch()
+      
+      if (editId) {
+        await api.put(`/announcements/${editId}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+        toast.success('Announcement updated')
+      } else {
+        await api.post('/announcements', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+        toast.success('Announcement created (draft)')
+      }
+      setModalOpen(false); reset(); fetch(); setEditId(null);
     } catch (e) { toast.error(e.response?.data?.message || 'Error') } finally { setSubmitting(false) }
+  }
+
+  const openEditModal = (ann) => {
+    setEditId(ann.id)
+    Object.keys(ann).forEach(k => {
+      if (k === 'expiryDate' && ann[k]) {
+        setValue(k, new Date(ann[k]).toISOString().split('T')[0])
+      } else if (k === 'targetRegions' || k === 'targetRoles') {
+        setValue(k, Array.isArray(ann[k]) ? ann[k].join(', ') : ann[k])
+      } else {
+        setValue(k, ann[k] || '')
+      }
+    })
+    setModalOpen(true)
   }
 
   const sendAnnouncement = async (id) => {
@@ -100,7 +122,7 @@ export default function AnnouncementsPage() {
       <PageHeader
         title="Announcements"
         subtitle={isSp && unreadCount > 0 ? `${unreadCount} unread` : `${pagination?.total ?? 0} total`}
-        actions={canCreate && <button onClick={() => { reset({ priority: 'Medium', targetType: 'All' }); setModalOpen(true) }} className="btn-primary"><Plus size={16} />New Announcement</button>}
+        actions={canCreate && <button onClick={() => { reset({ priority: 'Medium', targetType: 'All' }); setEditId(null); setModalOpen(true) }} className="btn-primary"><Plus size={16} />New Announcement</button>}
       />
 
       <div className="space-y-3">
@@ -129,7 +151,10 @@ export default function AnnouncementsPage() {
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   {!isSp && ann.status === 'Draft' && canCreate && (
-                    <button aria-label="Send announcement" onClick={e => { e.stopPropagation(); setSendTarget(ann) }} className="btn-primary btn-sm"><Send size={13} />Send</button>
+                    <>
+                      <button aria-label="Edit announcement" onClick={e => { e.stopPropagation(); openEditModal(ann) }} className="p-1.5 hover:bg-gray-100 hover:text-gray-800 rounded text-gray-500"><Edit size={14} /></button>
+                      <button aria-label="Send announcement" onClick={e => { e.stopPropagation(); setSendTarget(ann) }} className="btn-primary btn-sm ml-1"><Send size={13} />Send</button>
+                    </>
                   )}
                   {/* FIX: C-2 — route through confirmation state; FIX: H-4 — aria-label */}
                   {!isSp && canCreate && <button aria-label="Delete announcement" onClick={e => { e.stopPropagation(); setAnnToDelete(ann) }} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400"><Trash2 size={14} /></button>}
@@ -141,9 +166,9 @@ export default function AnnouncementsPage() {
         <Pagination page={pagination.page} totalPages={pagination.totalPages} onPageChange={fetch} />
       </div>
 
-      {/* Create Modal */}
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Create Announcement" size="lg">
-        <form onSubmit={handleSubmit(onCreate)} className="space-y-4">
+      {/* Create/Edit Modal */}
+      <Modal open={modalOpen} onClose={() => { setModalOpen(false); setEditId(null); }} title={editId ? "Edit Announcement" : "Create Announcement"} size="lg">
+        <form onSubmit={handleSubmit(onSubmitData)} className="space-y-4">
           <FormField label="Title" required>
             <input {...register('title', { required: 'Title is required' })} className="input" placeholder="Announcement title" />
           </FormField>
@@ -176,8 +201,8 @@ export default function AnnouncementsPage() {
             <p className="text-xs text-gray-400 mt-1">Accepted: PDF, Word, JPG, PNG · Max size: 5 MB</p>
           </FormField>
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" disabled={submitting} className="btn-primary">{submitting ? <><ButtonSpinner /> Saving...</> : 'Save as Draft'}</button>
+            <button type="button" onClick={() => { setModalOpen(false); setEditId(null); }} className="btn-secondary">Cancel</button>
+            <button type="submit" disabled={submitting} className="btn-primary">{submitting ? <><ButtonSpinner /> Saving...</> : (editId ? 'Update Draft' : 'Save as Draft')}</button>
           </div>
         </form>
       </Modal>

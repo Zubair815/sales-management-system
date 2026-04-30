@@ -305,7 +305,7 @@ model Announcement {
   updatedAt       DateTime @updatedAt
   deletedAt       DateTime?
 
-  createdBy       Admin    @relation(fields: [createdById], references: [id])
+  createdBy       Admin?   @relation(fields: [createdById], references: [id])
   recipients      AnnouncementRecipient[]
   reads           AnnouncementRead[]
 

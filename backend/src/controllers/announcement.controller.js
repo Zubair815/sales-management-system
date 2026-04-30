@@ -20,8 +20,27 @@ const getAdminAnnouncements = async (req, res) => {
       }),
       prisma.announcement.count({ where }),
     ]);
-    return paginatedResponse(res, announcements, total, page, limit);
-  } catch (e) { return errorResponse(res, 'Failed to fetch announcements', 500); }
+
+    const superAdminIds = announcements.filter(a => !a.createdBy).map(a => a.createdById);
+    let saMap = {};
+    if (superAdminIds.length > 0) {
+      const superAdmins = await prisma.superAdmin.findMany({
+        where: { id: { in: superAdminIds } },
+        select: { id: true, name: true }
+      });
+      superAdmins.forEach(sa => saMap[sa.id] = sa.name);
+    }
+
+    const formatted = announcements.map(a => ({
+      ...a,
+      createdBy: a.createdBy || { name: saMap[a.createdById] || 'Unknown' }
+    }));
+
+    return paginatedResponse(res, formatted, total, page, limit);
+  } catch (e) { 
+    console.error(e);
+    return errorResponse(res, 'Failed to fetch announcements', 500); 
+  }
 };
 
 const createAnnouncement = async (req, res) => {
@@ -42,6 +61,32 @@ const createAnnouncement = async (req, res) => {
     });
     return successResponse(res, ann, 'Announcement created', 201);
   } catch (e) { return errorResponse(res, 'Failed to create announcement', 500); }
+};
+
+const updateAnnouncement = async (req, res) => {
+  try {
+    const { title, message, priority, expiryDate, targetType, targetRegions, targetRoles } = req.body;
+    const ann = await prisma.announcement.findFirst({ where: { id: req.params.id, deletedAt: null } });
+    if (!ann) return errorResponse(res, 'Announcement not found', 404);
+    if (ann.status !== 'Draft') return errorResponse(res, 'Only draft announcements can be edited', 400);
+
+    let attachmentPath = ann.attachmentPath;
+    if (req.file) {
+      attachmentPath = `/uploads/announcements/${req.file.filename}`;
+    }
+
+    const updated = await prisma.announcement.update({
+      where: { id: req.params.id },
+      data: {
+        title, message, priority, attachmentPath,
+        expiryDate: expiryDate ? new Date(expiryDate) : null,
+        targetType,
+        targetRegions: targetRegions ? (Array.isArray(targetRegions) ? targetRegions : [targetRegions]) : [],
+        targetRoles: targetRoles ? (Array.isArray(targetRoles) ? targetRoles : [targetRoles]) : [],
+      }
+    });
+    return successResponse(res, updated, 'Announcement updated');
+  } catch (e) { return errorResponse(res, 'Failed to update announcement', 500); }
 };
 
 const sendAnnouncement = async (req, res) => {
@@ -165,4 +210,4 @@ const markAsRead = async (req, res) => {
   } catch (e) { return errorResponse(res, 'Failed to mark as read', 500); }
 };
 
-module.exports = { getAdminAnnouncements, createAnnouncement, sendAnnouncement, getAnnouncementStats, deleteAnnouncement, getSalespersonAnnouncements, markAsRead };
+module.exports = { getAdminAnnouncements, createAnnouncement, updateAnnouncement, sendAnnouncement, getAnnouncementStats, deleteAnnouncement, getSalespersonAnnouncements, markAsRead };

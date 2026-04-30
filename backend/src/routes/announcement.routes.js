@@ -11,6 +11,7 @@ router.use(authenticate);
 // Admin routes
 router.get('/admin', authorize('SuperAdmin', 'Admin'), checkModulePermission('Announcements', 'ViewOnly'), ctrl.getAdminAnnouncements);
 router.post('/', authorize('SuperAdmin', 'Admin'), checkModulePermission('Announcements', 'FullAccess'), (req, res, next) => { req.uploadSubDir = 'announcements'; next(); }, upload.single('attachment'), sanitizeInputs, ctrl.createAnnouncement);
+router.put('/:id', authorize('SuperAdmin', 'Admin'), checkModulePermission('Announcements', 'FullAccess'), (req, res, next) => { req.uploadSubDir = 'announcements'; next(); }, upload.single('attachment'), sanitizeInputs, ctrl.updateAnnouncement);
 router.post('/:id/send', authorize('SuperAdmin', 'Admin'), checkModulePermission('Announcements', 'FullAccess'), ctrl.sendAnnouncement);
 router.get('/:id/stats', authorize('SuperAdmin', 'Admin'), checkModulePermission('Announcements', 'ViewOnly'), ctrl.getAnnouncementStats);
 router.delete('/:id', authorize('SuperAdmin', 'Admin'), checkModulePermission('Announcements', 'FullAccess'), ctrl.deleteAnnouncement);
