@@ -46,7 +46,7 @@ const getAdminAnnouncements = async (req, res) => {
 
 const createAnnouncement = async (req, res) => {
   try {
-    const { title, message, priority = 'Medium', expiryDate, targetType = 'All', targetRegions, targetRoles } = req.body;
+    const { title, message, priority = 'Medium', expiryDate, targetType = 'All', targetRegions, targetRoles, targetSpecificIds } = req.body;
     if (!title || !message) return errorResponse(res, 'Title and message required', 400);
 
     const attachmentPath = req.file ? `/uploads/announcements/${req.file.filename}` : null;
@@ -58,6 +58,7 @@ const createAnnouncement = async (req, res) => {
         targetType, status: 'Draft',
         targetRegions: targetRegions ? (Array.isArray(targetRegions) ? targetRegions : [targetRegions]) : [],
         targetRoles: targetRoles ? (Array.isArray(targetRoles) ? targetRoles : [targetRoles]) : [],
+        targetSpecificIds: targetSpecificIds ? (Array.isArray(targetSpecificIds) ? targetSpecificIds : [targetSpecificIds]) : [],
       },
     });
     return successResponse(res, ann, 'Announcement created', 201);
@@ -66,7 +67,7 @@ const createAnnouncement = async (req, res) => {
 
 const updateAnnouncement = async (req, res) => {
   try {
-    const { title, message, priority, expiryDate, targetType, targetRegions, targetRoles } = req.body;
+    const { title, message, priority, expiryDate, targetType, targetRegions, targetRoles, targetSpecificIds } = req.body;
     const ann = await prisma.announcement.findFirst({ where: { id: req.params.id, deletedAt: null } });
     if (!ann) return errorResponse(res, 'Announcement not found', 404);
     if (ann.status !== 'Draft') return errorResponse(res, 'Only draft announcements can be edited', 400);
@@ -84,6 +85,7 @@ const updateAnnouncement = async (req, res) => {
         targetType,
         targetRegions: targetRegions ? (Array.isArray(targetRegions) ? targetRegions : [targetRegions]) : [],
         targetRoles: targetRoles ? (Array.isArray(targetRoles) ? targetRoles : [targetRoles]) : [],
+        targetSpecificIds: targetSpecificIds ? (Array.isArray(targetSpecificIds) ? targetSpecificIds : [targetSpecificIds]) : [],
       }
     });
     return successResponse(res, updated, 'Announcement updated');
@@ -102,8 +104,8 @@ const sendAnnouncement = async (req, res) => {
     let salespersons = [];
     if (ann.targetType === 'All') {
       salespersons = await prisma.salesperson.findMany({ where: { deletedAt: null, status: 'Active' }, select: { id: true } });
-    } else if (ann.targetType === 'Specific' && specificSalespersonIds?.length) {
-      salespersons = await prisma.salesperson.findMany({ where: { id: { in: specificSalespersonIds }, deletedAt: null, status: 'Active' }, select: { id: true } });
+    } else if (ann.targetType === 'Specific' && ann.targetSpecificIds?.length) {
+      salespersons = await prisma.salesperson.findMany({ where: { id: { in: ann.targetSpecificIds }, deletedAt: null, status: 'Active' }, select: { id: true } });
     } else if (ann.targetType === 'Region' && ann.targetRegions?.length) {
       salespersons = await prisma.salesperson.findMany({ where: { region: { in: ann.targetRegions }, deletedAt: null, status: 'Active' }, select: { id: true } });
     } else if (ann.targetType === 'Role' && ann.targetRoles?.length) {

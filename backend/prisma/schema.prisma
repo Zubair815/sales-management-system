@@ -301,6 +301,7 @@ model Announcement {
   targetType      String   @default("All") // All, Specific, Region, Role
   targetRegions   Json?
   targetRoles     Json?
+  targetSpecificIds Json?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   deletedAt       DateTime?

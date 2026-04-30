@@ -45,16 +45,41 @@ export default function AnnouncementsPage() {
   const [confirmLoading, setConfirmLoading] = useState(false)
   const [sendingId, setSendingId] = useState(null)
   const [editId, setEditId] = useState(null)
-  const { register, handleSubmit, reset, watch, setValue } = useForm({ defaultValues: { priority: 'Medium', targetType: 'All' } })
+  const [salespersonsList, setSalespersonsList] = useState([])
+  const [regionsList, setRegionsList] = useState([])
+  const [rolesList, setRolesList] = useState([])
+
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm({ defaultValues: { priority: 'Medium', targetType: 'All', targetRegions: [], targetRoles: [], targetSpecificIds: [] } })
   const targetType = watch('targetType')
 
   const { data, setData, pagination, loading, unreadCount, setUnreadCount, refetch: fetch } = useAnnouncementsData(isSp) // FIX: L-10
+
+  useEffect(() => {
+    if (canCreate && modalOpen) {
+      api.get('/salespersons', { params: { limit: 1000 } })
+        .then(r => {
+          const activeSp = r.data.data.filter(sp => sp.status === 'Active')
+          setSalespersonsList(activeSp)
+          setRegionsList([...new Set(activeSp.map(sp => sp.region).filter(Boolean))])
+          setRolesList([...new Set(activeSp.map(sp => sp.jobRole).filter(Boolean))])
+        })
+        .catch(console.error)
+    }
+  }, [canCreate, modalOpen])
 
   const onSubmitData = async (d) => {
     setSubmitting(true)
     try {
       const formData = new FormData()
-      Object.entries(d).forEach(([k, v]) => { if (v !== '' && v !== undefined) formData.append(k, v) })
+      Object.entries(d).forEach(([k, v]) => { 
+        if (v !== '' && v !== undefined) {
+          if (Array.isArray(v)) {
+            if (v.length > 0) v.forEach(item => formData.append(k, item))
+          } else {
+            formData.append(k, v)
+          }
+        } 
+      })
       if (d.attachment?.[0]) formData.set('attachment', d.attachment[0])
       
       if (editId) {
@@ -73,8 +98,8 @@ export default function AnnouncementsPage() {
     Object.keys(ann).forEach(k => {
       if (k === 'expiryDate' && ann[k]) {
         setValue(k, new Date(ann[k]).toISOString().split('T')[0])
-      } else if (k === 'targetRegions' || k === 'targetRoles') {
-        setValue(k, Array.isArray(ann[k]) ? ann[k].join(', ') : ann[k])
+      } else if (k === 'targetRegions' || k === 'targetRoles' || k === 'targetSpecificIds') {
+        setValue(k, Array.isArray(ann[k]) ? ann[k] : [])
       } else {
         setValue(k, ann[k] || '')
       }
@@ -195,8 +220,42 @@ export default function AnnouncementsPage() {
             </FormField>
           </div>
           {targetType === 'Region' && (
-            <FormField label="Regions (comma separated)">
-              <input {...register('targetRegions')} className="input" placeholder="North, South, East" />
+            <FormField label="Select Regions" required error={errors.targetRegions?.message}>
+              <div className="flex flex-wrap gap-4 mt-1 p-3 border rounded bg-gray-50 max-h-40 overflow-y-auto">
+                {regionsList.length === 0 && <span className="text-sm text-gray-500">No regions found</span>}
+                {regionsList.map(region => (
+                  <label key={region} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-100 p-1 rounded">
+                    <input type="checkbox" value={region} {...register('targetRegions', { required: 'Select at least one region' })} className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer" />
+                    {region}
+                  </label>
+                ))}
+              </div>
+            </FormField>
+          )}
+          {targetType === 'Role' && (
+            <FormField label="Select Roles" required error={errors.targetRoles?.message}>
+              <div className="flex flex-wrap gap-4 mt-1 p-3 border rounded bg-gray-50 max-h-40 overflow-y-auto">
+                {rolesList.length === 0 && <span className="text-sm text-gray-500">No roles found</span>}
+                {rolesList.map(role => (
+                  <label key={role} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-100 p-1 rounded">
+                    <input type="checkbox" value={role} {...register('targetRoles', { required: 'Select at least one role' })} className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer" />
+                    {role}
+                  </label>
+                ))}
+              </div>
+            </FormField>
+          )}
+          {targetType === 'Specific' && (
+            <FormField label="Select Salespersons" required error={errors.targetSpecificIds?.message}>
+              <div className="max-h-48 overflow-y-auto border rounded p-3 grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1 bg-gray-50">
+                {salespersonsList.length === 0 && <span className="text-sm text-gray-500 col-span-2">No active salespersons found</span>}
+                {salespersonsList.map(sp => (
+                  <label key={sp.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-100 p-1 rounded">
+                    <input type="checkbox" value={sp.id} {...register('targetSpecificIds', { required: 'Select at least one salesperson' })} className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer flex-shrink-0" />
+                    <span className="truncate" title={sp.name}>{sp.name} <span className="text-gray-400 text-xs">({sp.employeeId})</span></span>
+                  </label>
+                ))}
+              </div>
             </FormField>
           )}
           <FormField label="Expiry Date (optional)">
