@@ -4,10 +4,14 @@ const { createAuditLog } = require('../utils/audit');
 
 const getAdminAnnouncements = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10, sortBy = 'date_desc' } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const where = { deletedAt: null };
     if (req.user.role === 'Admin') where.createdById = req.user.id;
+
+    let orderBy = { createdAt: 'desc' };
+    if (sortBy === 'date_asc') orderBy = { createdAt: 'asc' };
+    else if (sortBy === 'priority_asc') orderBy = [{ priority: 'asc' }, { createdAt: 'desc' }];
 
     const [announcements, total] = await Promise.all([
       prisma.announcement.findMany({
@@ -17,7 +21,7 @@ const getAdminAnnouncements = async (req, res) => {
           _count: { select: { reads: true, recipients: true } },
           reads: { include: { salesperson: { select: { name: true } } } },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy,
       }),
       prisma.announcement.count({ where }),
     ]);
@@ -161,7 +165,7 @@ const deleteAnnouncement = async (req, res) => {
 
 const getSalespersonAnnouncements = async (req, res) => {
   try {
-    const { page = 1, limit = 20, unreadOnly } = req.query;
+    const { page = 1, limit = 20, unreadOnly, sortBy = 'date_desc' } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const spId = req.user.id;
 
@@ -177,13 +181,17 @@ const getSalespersonAnnouncements = async (req, res) => {
       where.reads = { none: { salespersonId: spId } };
     }
 
+    let orderBy = { createdAt: 'desc' };
+    if (sortBy === 'date_asc') orderBy = { createdAt: 'asc' };
+    else if (sortBy === 'priority_asc') orderBy = [{ priority: 'asc' }, { createdAt: 'desc' }];
+
     const [anns, total] = await Promise.all([
       prisma.announcement.findMany({
         where, skip, take: parseInt(limit),
         include: {
           reads: { where: { salespersonId: spId }, select: { readAt: true } },
         },
-        orderBy: [{ priority: 'asc' }, { createdAt: 'desc' }],
+        orderBy,
       }),
       prisma.announcement.count({ where }),
     ]);

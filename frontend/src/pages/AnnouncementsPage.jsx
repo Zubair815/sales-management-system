@@ -7,7 +7,7 @@ import { Plus, Send, Bell, Eye, Trash2, Users, Megaphone, Edit, Paperclip } from
 import { useAuth } from '../contexts/AuthContext'
 
 // FIX: L-10 — extracted data fetching into a dedicated custom hook
-function useAnnouncementsData(isSp) {
+function useAnnouncementsData(isSp, sortBy) {
   const [data, setData] = useState([])
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1 })
   const [loading, setLoading] = useState(true)
@@ -19,14 +19,14 @@ function useAnnouncementsData(isSp) {
     setError(null)
     try {
       if (isSp) {
-        const r = await api.get('/announcements/inbox', { params: { page, limit: 20 } })
+        const r = await api.get('/announcements/inbox', { params: { page, limit: 20, sortBy } })
         setData(r.data.data); setPagination(r.data.pagination); setUnreadCount(r.data.unreadCount || 0)
       } else {
-        const r = await api.get('/announcements/admin', { params: { page, limit: 10 } })
+        const r = await api.get('/announcements/admin', { params: { page, limit: 10, sortBy } })
         setData(r.data.data); setPagination(r.data.pagination)
       }
     } catch { toast.error('Failed to load announcements. Please refresh.') } finally { setLoading(false) }
-  }, [isSp])
+  }, [isSp, sortBy])
 
   useEffect(() => { refetch() }, [refetch])
 
@@ -49,11 +49,12 @@ export default function AnnouncementsPage() {
   const [salespersonsList, setSalespersonsList] = useState([])
   const [regionsList, setRegionsList] = useState([])
   const [rolesList, setRolesList] = useState([])
+  const [sortBy, setSortBy] = useState('date_desc')
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm({ defaultValues: { priority: 'Medium', targetType: 'All', targetRegions: [], targetRoles: [], targetSpecificIds: [] } })
   const targetType = watch('targetType')
 
-  const { data, setData, pagination, loading, unreadCount, setUnreadCount, refetch: fetch } = useAnnouncementsData(isSp) // FIX: L-10
+  const { data, setData, pagination, loading, unreadCount, setUnreadCount, refetch: fetch } = useAnnouncementsData(isSp, sortBy) // FIX: L-10
 
   useEffect(() => {
     if (canCreate && modalOpen) {
@@ -149,7 +150,16 @@ export default function AnnouncementsPage() {
       <PageHeader
         title="Announcements"
         subtitle={isSp && unreadCount > 0 ? `${unreadCount} unread` : `${pagination?.total ?? 0} total`}
-        actions={canCreate && <button onClick={() => { reset({ priority: 'Medium', targetType: 'All' }); setEditId(null); setModalOpen(true) }} className="btn-primary"><Plus size={16} />New Announcement</button>}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="input w-auto py-1.5 text-sm cursor-pointer bg-white">
+              <option value="date_desc">Newest First</option>
+              <option value="date_asc">Oldest First</option>
+              <option value="priority_asc">Priority (High - Low)</option>
+            </select>
+            {canCreate && <button onClick={() => { reset({ priority: 'Medium', targetType: 'All' }); setEditId(null); setModalOpen(true) }} className="btn-primary"><Plus size={16} />New Announcement</button>}
+          </div>
+        }
       />
 
       <div className="space-y-3">
