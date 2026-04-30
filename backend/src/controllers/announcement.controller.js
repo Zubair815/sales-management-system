@@ -49,7 +49,7 @@ const createAnnouncement = async (req, res) => {
     const { title, message, priority = 'Medium', expiryDate, targetType = 'All', targetRegions, targetRoles, targetSpecificIds } = req.body;
     if (!title || !message) return errorResponse(res, 'Title and message required', 400);
 
-    const attachmentPath = req.file ? `/uploads/announcements/${req.file.filename}` : null;
+    const attachmentPath = req.file ? req.file.path : null;
 
     const ann = await prisma.announcement.create({
       data: {
@@ -74,7 +74,7 @@ const updateAnnouncement = async (req, res) => {
 
     let attachmentPath = ann.attachmentPath;
     if (req.file) {
-      attachmentPath = `/uploads/announcements/${req.file.filename}`;
+      attachmentPath = req.file.path;
     }
 
     const updated = await prisma.announcement.update({

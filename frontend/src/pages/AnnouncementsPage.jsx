@@ -3,7 +3,7 @@ import api from '../services/api'
 import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
 import { Modal, ConfirmDialog, Pagination, StatusBadge, PageHeader, EmptyState, FormField, LoadingSpinner, ButtonSpinner } from '../components/index.jsx'
-import { Plus, Send, Bell, Eye, Trash2, Users, Megaphone, Edit } from 'lucide-react'
+import { Plus, Send, Bell, Eye, Trash2, Users, Megaphone, Edit, Paperclip } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
 // FIX: L-10 — extracted data fetching into a dedicated custom hook
@@ -45,6 +45,7 @@ export default function AnnouncementsPage() {
   const [confirmLoading, setConfirmLoading] = useState(false)
   const [sendingId, setSendingId] = useState(null)
   const [editId, setEditId] = useState(null)
+  const [currentAttachment, setCurrentAttachment] = useState(null)
   const [salespersonsList, setSalespersonsList] = useState([])
   const [regionsList, setRegionsList] = useState([])
   const [rolesList, setRolesList] = useState([])
@@ -89,12 +90,13 @@ export default function AnnouncementsPage() {
         await api.post('/announcements', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
         toast.success('Announcement created (draft)')
       }
-      setModalOpen(false); reset(); fetch(); setEditId(null);
+      setModalOpen(false); reset(); fetch(); setEditId(null); setCurrentAttachment(null);
     } catch (e) { toast.error(e.response?.data?.message || 'Error') } finally { setSubmitting(false) }
   }
 
   const openEditModal = (ann) => {
     setEditId(ann.id)
+    setCurrentAttachment(ann.attachmentPath || null)
     Object.keys(ann).forEach(k => {
       if (k === 'expiryDate' && ann[k]) {
         setValue(k, new Date(ann[k]).toISOString().split('T')[0])
@@ -167,6 +169,13 @@ export default function AnnouncementsPage() {
                   </div>
                   <h3 className="font-semibold text-gray-900">{ann.title}</h3>
                   <p className="text-sm text-gray-600 mt-1 line-clamp-2">{ann.message}</p>
+                  {ann.attachmentPath && (
+                    <div className="mt-2">
+                      <a href={ann.attachmentPath} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 font-medium bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 rounded transition-colors" onClick={(e) => e.stopPropagation()}>
+                        <Paperclip size={14} /> View Attachment
+                      </a>
+                    </div>
+                  )}
                   <p className="text-xs text-gray-400 mt-2">{new Date(ann.createdAt).toLocaleString()}{ann.createdBy && ` · ${ann.createdBy.name}`}</p>
                   {!isSp && ann._count && (
                     <div className="mt-1">
@@ -199,7 +208,7 @@ export default function AnnouncementsPage() {
       </div>
 
       {/* Create/Edit Modal */}
-      <Modal open={modalOpen} onClose={() => { setModalOpen(false); setEditId(null); }} title={editId ? "Edit Announcement" : "Create Announcement"} size="lg">
+      <Modal open={modalOpen} onClose={() => { setModalOpen(false); setEditId(null); setCurrentAttachment(null); }} title={editId ? "Edit Announcement" : "Create Announcement"} size="lg">
         <form onSubmit={handleSubmit(onSubmitData)} className="space-y-4">
           <FormField label="Title" required>
             <input {...register('title', { required: 'Title is required' })} className="input" placeholder="Announcement title" />
@@ -265,9 +274,16 @@ export default function AnnouncementsPage() {
             {/* FIX: M-8 — accept filter + onChange size check */}
             <input {...register('attachment')} type="file" className="input py-1.5 text-xs" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" onChange={handleAttachmentChange} />
             <p className="text-xs text-gray-400 mt-1">Accepted: PDF, Word, JPG, PNG · Max size: 5 MB</p>
+            {currentAttachment && (
+               <div className="mt-2">
+                 <a href={currentAttachment} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium">
+                   <Paperclip size={12} /> Current Attachment Linked
+                 </a>
+               </div>
+            )}
           </FormField>
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={() => { setModalOpen(false); setEditId(null); }} className="btn-secondary">Cancel</button>
+            <button type="button" onClick={() => { setModalOpen(false); setEditId(null); setCurrentAttachment(null); }} className="btn-secondary">Cancel</button>
             <button type="submit" disabled={submitting} className="btn-primary">{submitting ? <><ButtonSpinner /> Saving...</> : (editId ? 'Update Draft' : 'Save as Draft')}</button>
           </div>
         </form>
