@@ -114,14 +114,14 @@ export default function PaymentsPage() {
                     <td data-label="Mode"><span className="badge badge-blue">{p.paymentMode}</span></td>
                     <td data-label="Status"><StatusBadge status={p.status} /></td>
                     <td data-label="Actions" data-cell="actions">
-                      <div className="flex flex-wrap gap-1 justify-end md:justify-start">
-                        <button onClick={() => setViewItem(p)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400" aria-label="View payment"><Eye size={14} /></button>
-                        <button onClick={() => openPrint(p)} className="p-1.5 hover:bg-gray-50 hover:text-gray-700 rounded text-gray-400" aria-label="Print receipt"><Printer size={14} /></button>
-                          {canVerify && p.status === 'Pending' && (
-                            <>
-                              <button onClick={() => verify(p.id)} disabled={actionLoadingId === `verify_${p.id}`} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400 disabled:opacity-50" aria-label="Verify payment">{actionLoadingId === `verify_${p.id}` ? <ButtonSpinner size={14} /> : <Check size={14} />}</button>
-                              <button onClick={() => { setRejectTarget(p); rst2() }} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400" aria-label="Reject payment"><X size={14} /></button>
-                            </>
+                      <div className="flex flex-wrap gap-2 justify-end md:justify-start">
+                        <button onClick={() => setViewItem(p)} className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded text-xs font-medium transition-colors" aria-label="View payment"><Eye size={14} /> View</button>
+                        <button onClick={() => openPrint(p)} className="flex items-center gap-1 px-2 py-1 bg-gray-50 text-gray-700 hover:bg-gray-200 rounded text-xs font-medium transition-colors" aria-label="Print receipt"><Printer size={14} /> Print</button>
+                        {canVerify && p.status === 'Pending' && (
+                          <>
+                            <button onClick={() => verify(p.id)} disabled={actionLoadingId === `verify_${p.id}`} className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-600 hover:bg-green-100 rounded text-xs font-medium transition-colors disabled:opacity-50" aria-label="Verify payment">{actionLoadingId === `verify_${p.id}` ? <ButtonSpinner size={14} /> : <Check size={14} />} Verify</button>
+                            <button onClick={() => { setRejectTarget(p); rst2() }} className="flex items-center gap-1 px-2 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded text-xs font-medium transition-colors" aria-label="Reject payment"><X size={14} /> Reject</button>
+                          </>
                         )}
                       </div>
                     </td>

@@ -200,15 +200,15 @@ export default function AnnouncementsPage() {
                     </div>
                   )}
                 </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="flex items-center gap-2 flex-shrink-0">
                   {!isSp && ann.status === 'Draft' && canCreate && (
                     <>
-                      <button aria-label="Edit announcement" onClick={e => { e.stopPropagation(); openEditModal(ann) }} className="btn-secondary btn-sm">Edit</button>
-                      <button aria-label="Send announcement" onClick={e => { e.stopPropagation(); setSendTarget(ann) }} className="btn-primary btn-sm ml-1"><Send size={13} />Send</button>
+                      <button aria-label="Edit announcement" onClick={e => { e.stopPropagation(); openEditModal(ann) }} className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded text-xs font-medium transition-colors"><Edit size={14} /> Edit</button>
+                      <button aria-label="Send announcement" onClick={e => { e.stopPropagation(); setSendTarget(ann) }} className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-600 hover:bg-green-100 rounded text-xs font-medium transition-colors"><Send size={14} /> Send</button>
                     </>
                   )}
                   {/* FIX: C-2 — route through confirmation state; FIX: H-4 — aria-label */}
-                  {!isSp && canCreate && <button aria-label="Delete announcement" onClick={e => { e.stopPropagation(); setAnnToDelete(ann) }} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400"><Trash2 size={14} /></button>}
+                  {!isSp && canCreate && <button aria-label="Delete announcement" onClick={e => { e.stopPropagation(); setAnnToDelete(ann) }} className="flex items-center gap-1 px-2 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded text-xs font-medium transition-colors"><Trash2 size={14} /> Delete</button>}
                 </div>
               </div>
             </div>

@@ -113,21 +113,21 @@ export default function AdminsPage() {
                     <td data-label="Status"><StatusBadge status={admin.status} /></td>
                     <td data-label="Last Login" className="text-gray-500">{admin.lastLoginAt ? new Date(admin.lastLoginAt).toLocaleDateString() : 'Never'}</td>
                     <td data-label="Actions" data-cell="actions">
-                      <div className="flex flex-wrap items-center gap-1 justify-end md:justify-start">
-                        <Link to={`/admins/${admin.id}/permissions`} className="p-1.5 hover:bg-purple-50 hover:text-purple-600 rounded text-gray-400 transition-colors" title="Permissions" aria-label="Manage permissions">
-                          <Shield size={15} />
+                      <div className="flex flex-wrap items-center gap-2 justify-end md:justify-start">
+                        <Link to={`/admins/${admin.id}/permissions`} className="flex items-center gap-1 px-2 py-1 bg-purple-50 text-purple-600 hover:bg-purple-100 rounded text-xs font-medium transition-colors" aria-label="Manage permissions">
+                          <Shield size={14} /> Permissions
                         </Link>
-                        <button onClick={() => openEdit(admin)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400 transition-colors" title="Edit" aria-label="Edit admin">
-                          <Edit size={15} />
+                        <button onClick={() => openEdit(admin)} className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded text-xs font-medium transition-colors" aria-label="Edit admin">
+                          <Edit size={14} /> Edit
                         </button>
-                        <button onClick={() => toggleStatus(admin)} disabled={actionLoadingId === `toggle_${admin.id}`} className="p-1.5 hover:bg-yellow-50 hover:text-yellow-600 rounded text-gray-400 transition-colors disabled:opacity-50" title="Toggle Status" aria-label="Toggle admin status">
-                          {actionLoadingId === `toggle_${admin.id}` ? <ButtonSpinner size={15} /> : admin.status === 'Active' ? <ToggleRight size={15} /> : <ToggleLeft size={15} />}
+                        <button onClick={() => toggleStatus(admin)} disabled={actionLoadingId === `toggle_${admin.id}`} className="flex items-center gap-1 px-2 py-1 bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded text-xs font-medium transition-colors disabled:opacity-50" aria-label="Toggle admin status">
+                          {actionLoadingId === `toggle_${admin.id}` ? <ButtonSpinner size={14} /> : admin.status === 'Active' ? <ToggleRight size={14} /> : <ToggleLeft size={14} />} {admin.status === 'Active' ? 'Deactivate' : 'Activate'}
                         </button>
-                        <button onClick={() => { setResetTarget(admin); rst2() }} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400 transition-colors" title="Reset Password" aria-label="Reset password">
-                          <Key size={15} />
+                        <button onClick={() => { setResetTarget(admin); rst2() }} className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-600 hover:bg-green-100 rounded text-xs font-medium transition-colors" aria-label="Reset password">
+                          <Key size={14} /> Reset Pwd
                         </button>
-                        <button onClick={() => setDeleteTarget(admin)} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400 transition-colors" title="Delete" aria-label="Delete admin">
-                          <Trash2 size={15} />
+                        <button onClick={() => setDeleteTarget(admin)} className="flex items-center gap-1 px-2 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded text-xs font-medium transition-colors" aria-label="Delete admin">
+                          <Trash2 size={14} /> Delete
                         </button>
                       </div>
                     </td>

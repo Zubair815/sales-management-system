@@ -98,12 +98,12 @@ const deleteSp = async () => {
       <td data-label="Status"><StatusBadge status={sp.status} /></td>
       <td data-label="Target" className="text-gray-500">{sp.targetAmount ? `Rs ${Number(sp.targetAmount).toLocaleString()}` : '-'}</td>
       <td data-label="Actions" data-cell="actions">
-        <div className="flex flex-wrap items-center gap-1 justify-end md:justify-start">
+        <div className="flex flex-wrap items-center gap-2 justify-end md:justify-start">
           {/* FIX: H-4 — aria-label on all icon-only buttons */}
-          {canEdit && <button aria-label="Edit salesperson" onClick={() => openEdit(sp)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400"><Edit size={14} /></button>}
-          {canCreate && <button aria-label="Toggle salesperson status" onClick={() => toggleStatus(sp)} disabled={actionLoadingId === `toggle_${sp.id}`} className="p-1.5 hover:bg-yellow-50 hover:text-yellow-600 rounded text-gray-400 disabled:opacity-50">{actionLoadingId === `toggle_${sp.id}` ? <ButtonSpinner size={14} /> : sp.status === 'Active' ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}</button>}
-          {canCreate && <button aria-label="Reset password" onClick={() => { setResetTarget(sp); rst2() }} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400"><Key size={14} /></button>}
-          {canCreate && <button aria-label="Delete salesperson" onClick={() => setDeleteTarget(sp)} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400"><Trash2 size={14} /></button>}
+          {canEdit && <button aria-label="Edit salesperson" onClick={() => openEdit(sp)} className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded text-xs font-medium transition-colors"><Edit size={14} /> Edit</button>}
+          {canCreate && <button aria-label="Toggle salesperson status" onClick={() => toggleStatus(sp)} disabled={actionLoadingId === `toggle_${sp.id}`} className="flex items-center gap-1 px-2 py-1 bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded text-xs font-medium transition-colors disabled:opacity-50">{actionLoadingId === `toggle_${sp.id}` ? <ButtonSpinner size={14} /> : sp.status === 'Active' ? <ToggleRight size={14} /> : <ToggleLeft size={14} />} {sp.status === 'Active' ? 'Deactivate' : 'Activate'}</button>}
+          {canCreate && <button aria-label="Reset password" onClick={() => { setResetTarget(sp); rst2() }} className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-600 hover:bg-green-100 rounded text-xs font-medium transition-colors"><Key size={14} /> Reset Pwd</button>}
+          {canCreate && <button aria-label="Delete salesperson" onClick={() => setDeleteTarget(sp)} className="flex items-center gap-1 px-2 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded text-xs font-medium transition-colors"><Trash2 size={14} /> Delete</button>}
         </div>
       </td>
     </tr>

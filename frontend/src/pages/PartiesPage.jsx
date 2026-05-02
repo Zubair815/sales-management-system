@@ -83,10 +83,10 @@ export function PartiesPage() {
                     <td data-label="Status"><StatusBadge status={p.status} /></td>
                     {canEdit && (
                       <td data-label="Actions" data-cell="actions">
-                        <div className="flex flex-wrap gap-1 justify-end md:justify-start">
-                          <button onClick={() => openEdit(p)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400" aria-label="Edit party"><Edit size={14} /></button>
-                          {canCreate && <button onClick={() => toggleStatus(p)} disabled={actionLoadingId === `toggle_${p.id}`} className="p-1.5 hover:bg-yellow-50 hover:text-yellow-600 rounded text-gray-400 disabled:opacity-50" aria-label="Toggle party status">{actionLoadingId === `toggle_${p.id}` ? <ButtonSpinner size={14} /> : p.status === 'Active' ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}</button>}
-                          {canCreate && <button onClick={() => setDeleteTarget(p)} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400" aria-label="Delete party"><Trash2 size={14} /></button>}
+                        <div className="flex flex-wrap gap-2 justify-end md:justify-start">
+                          <button onClick={() => openEdit(p)} className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded text-xs font-medium transition-colors" aria-label="Edit party"><Edit size={14} /> Edit</button>
+                          {canCreate && <button onClick={() => toggleStatus(p)} disabled={actionLoadingId === `toggle_${p.id}`} className="flex items-center gap-1 px-2 py-1 bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded text-xs font-medium transition-colors disabled:opacity-50" aria-label="Toggle party status">{actionLoadingId === `toggle_${p.id}` ? <ButtonSpinner size={14} /> : p.status === 'Active' ? <ToggleRight size={14} /> : <ToggleLeft size={14} />} {p.status === 'Active' ? 'Deactivate' : 'Activate'}</button>}
+                          {canCreate && <button onClick={() => setDeleteTarget(p)} className="flex items-center gap-1 px-2 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded text-xs font-medium transition-colors" aria-label="Delete party"><Trash2 size={14} /> Delete</button>}
                         </div>
                       </td>
                     )}

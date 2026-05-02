@@ -90,12 +90,12 @@ export default function InventoryPage() {
                     <td data-label="Status"><StatusBadge status={item.status} /></td>
                     {canEdit && (
                       <td data-label="Actions" data-cell="actions">
-                        <div className="flex flex-wrap gap-1 justify-end md:justify-start">
-                          <button onClick={() => openEdit(item)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded text-gray-400" aria-label="Edit item"><Edit size={14} /></button>
-                          <button onClick={() => { setStockTarget(item); rst2() }} className="p-1.5 hover:bg-green-50 hover:text-green-600 rounded text-gray-400" title="Adjust Stock" aria-label="Adjust stock">
-                            <PlusCircle size={14} />
+                        <div className="flex flex-wrap gap-2 justify-end md:justify-start">
+                          <button onClick={() => openEdit(item)} className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded text-xs font-medium transition-colors" aria-label="Edit item"><Edit size={14} /> Edit</button>
+                          <button onClick={() => { setStockTarget(item); rst2() }} className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-600 hover:bg-green-100 rounded text-xs font-medium transition-colors" aria-label="Adjust stock">
+                            <PlusCircle size={14} /> Adjust Stock
                           </button>
-                          {canCreate && <button onClick={() => setDeleteTarget(item)} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-gray-400" aria-label="Delete item"><Trash2 size={14} /></button>}
+                          {canCreate && <button onClick={() => setDeleteTarget(item)} className="flex items-center gap-1 px-2 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded text-xs font-medium transition-colors" aria-label="Delete item"><Trash2 size={14} /> Delete</button>}
                         </div>
                       </td>
                     )}
