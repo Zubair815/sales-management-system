@@ -34,7 +34,7 @@ export default function ExpensesPage() {
   const [actionLoadingId, setActionLoadingId] = useState(null)
   
   const { register, handleSubmit, reset, formState: { errors } } = useForm()
-  const { register: reg2, handleSubmit: hs2, reset: rst2 } = useForm()
+  const { register: reg2, handleSubmit: hs2, reset: rst2, formState: { errors: errors2 } } = useForm({ shouldUnregister: true })
 
   const debouncedSearch = useDebounce(search, 500)
 
@@ -376,9 +376,11 @@ export default function ExpensesPage() {
           </div>
           <form onSubmit={hs2(actionTarget.action === 'approve' ? approveExpense : rejectExpense)} className="space-y-4">
             {actionTarget.action === 'approve' ? (
-              <FormField label="Remarks (optional)"><textarea {...reg2('remarks')} className="input" rows={2} /></FormField>
+              <FormField label="Remarks (optional)" error={errors2.remarks?.message}>
+                <textarea {...reg2('remarks')} className="input" rows={2} />
+              </FormField>
             ) : (
-              <FormField label="Rejection Reason" required>
+              <FormField label="Rejection Reason" required error={errors2.rejectionReason?.message}>
                 <textarea {...reg2('rejectionReason', { required: 'Rejection reason is required' })} className="input" rows={2} placeholder="Please provide reason..." />
               </FormField>
             )}

@@ -10,10 +10,9 @@ export default function MonthlyExpensePrintTemplate({ data }) {
     <div id="print-root-portal">
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
-          body > *:not(#print-root-portal) { display: none !important; }
-          html, body { margin: 0 !important; padding: 0 !important; height: auto !important; overflow: visible !important; background: white !important; }
-          #print-root-portal { display: block !important; position: relative !important; width: 100% !important; visibility: visible !important; }
-          #print-root-portal * { visibility: visible !important; }
+          body * { visibility: hidden; }
+          #print-root-portal, #print-root-portal * { visibility: visible; }
+          #print-root-portal { position: absolute; left: 0; top: 0; width: 100%; display: block !important; }
           
           .print-page { 
             width: 100%; 
@@ -152,7 +151,7 @@ export default function MonthlyExpensePrintTemplate({ data }) {
 
       {/* SUBSEQUENT PAGES: THE PROOFS */}
       {expenses.map((e) => {
-        const isImage = e.proofFilePath && e.proofFilePath.match(/\.(jpeg|jpg|gif|png)$/i) != null;
+        const isImage = e.proofFilePath && !e.proofFilePath.toLowerCase().includes('.pdf');
         if (!isImage) return null;
 
         return (
