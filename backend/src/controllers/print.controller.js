@@ -14,7 +14,7 @@ const getTemplates = async (req, res) => {
 const getTemplate = async (req, res) => {
   try {
     const cacheKey = `print_template_${req.params.name}`;
-    let template = cache.get(cacheKey);
+    let template = cache.getCache(cacheKey);
 
     if (!template) {
       template = await prisma.printTemplate.findFirst({ where: { name: req.params.name } });
@@ -26,7 +26,7 @@ const getTemplate = async (req, res) => {
           companyEmail: 'info@company.com', logoPath: null, footerText: 'Thank you for your business!',
         };
       }
-      cache.set(cacheKey, template, 3600000); // Cache for 1 hour
+      cache.setCache(cacheKey, template, 3600); // Cache for 1 hour
     }
     return successResponse(res, template);
   } catch (e) { return errorResponse(res, 'Failed to fetch template', 500); }
@@ -42,7 +42,7 @@ const updateTemplate = async (req, res) => {
     });
     
     // Invalidate cache
-    cache.del(`print_template_${req.params.name}`);
+    cache.clearCache(`print_template_${req.params.name}`);
     
     return successResponse(res, template, 'Template updated');
   } catch (e) { return errorResponse(res, 'Failed to update template', 500); }
