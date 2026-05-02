@@ -3,10 +3,11 @@ import api from '../services/api'
 import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
 import { Modal, ConfirmDialog, Pagination, StatusBadge, PageHeader, EmptyState, FormField, SearchInput, LoadingSpinner, ButtonSpinner } from '../components/index.jsx'
-import { Plus, Eye, Check, X, Receipt, Paperclip, Send, ArrowLeft } from 'lucide-react'
+import { Plus, Eye, Check, X, Receipt, Paperclip, Send, ArrowLeft, Copy } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import MonthlyExpensePrintTemplate from '../components/MonthlyExpensePrintTemplate'
 import useDebounce from '../hooks/useDebounce'
+import imageCompression from 'browser-image-compression'
 
 export default function ExpensesPage() {
   const { user, hasPermission } = useAuth()
@@ -67,12 +68,35 @@ export default function ExpensesPage() {
   useEffect(() => { fetchExpenseTypes() }, [])
 
   // --- ACTIONS ---
+  const handleDuplicate = (expense) => {
+    reset({
+      expenseTypeId: expense.expenseTypeId,
+      description: expense.description,
+      amount: expense.amount,
+      expenseDate: new Date(expense.expenseDate).toISOString().split('T')[0]
+    });
+    setModalOpen(true);
+  };
+
   const onSubmit = async (d) => {
     setSubmitting(true)
     try {
       const formData = new FormData()
       Object.entries(d).forEach(([k, v]) => { if (v !== undefined && v !== '') formData.append(k, v) })
-      if (d.proof?.[0]) formData.set('proof', d.proof[0])
+      
+      if (d.proof?.[0]) {
+        let file = d.proof[0]
+        if (file.type.startsWith('image/')) {
+          try {
+            const options = { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true }
+            file = await imageCompression(file, options)
+          } catch (error) {
+            console.error('Image compression failed', error)
+          }
+        }
+        formData.set('proof', file)
+      }
+      
       await api.post('/expenses', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
       toast.success('Expense saved as draft'); setModalOpen(false); reset(); fetchData()
     } catch (e) { toast.error(e.response?.data?.message || 'Error') } finally { setSubmitting(false) }
@@ -296,6 +320,9 @@ export default function ExpensesPage() {
                             <button onClick={() => { setActionTarget({ ...e, action: 'approve' }); rst2() }} className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-600 hover:bg-green-100 rounded text-xs font-medium transition-colors" aria-label="Approve expense"><Check size={14} /> Approve</button>
                             <button onClick={() => { setActionTarget({ ...e, action: 'reject' }); rst2() }} className="flex items-center gap-1 px-2 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded text-xs font-medium transition-colors" aria-label="Reject expense"><X size={14} /> Reject</button>
                           </>
+                        )}
+                        {isSp && e.status === 'Rejected' && (
+                          <button onClick={() => handleDuplicate(e)} className="flex items-center gap-1 px-2 py-1 bg-orange-50 text-orange-600 hover:bg-orange-100 rounded text-xs font-medium transition-colors" aria-label="Duplicate rejected expense"><Copy size={14} /> Duplicate</button>
                         )}
                       </div>
                     </td>
