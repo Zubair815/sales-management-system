@@ -313,16 +313,16 @@ export default function ExpensesPage() {
                     <td data-label="Status"><StatusBadge status={e.status} /></td>
                     <td data-label="Proof">{e.proofFilePath ? <a href={e.proofFilePath} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-blue-600 hover:underline text-xs"><Paperclip size={12} />View</a> : <span className="text-gray-300 text-xs">None</span>}</td>
                     <td data-label="Actions" data-cell="actions">
-                      <div className="flex flex-wrap justify-end gap-2 md:justify-start">
-                        <button onClick={() => setViewItem(e)} className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded text-xs font-medium transition-colors" aria-label="View expense"><Eye size={14} /> View</button>
+                      <div className="flex flex-wrap justify-end gap-1 md:justify-start">
+                        <button onClick={() => setViewItem(e)} className="action-btn-blue" aria-label="View expense"><Eye size={14} /> View</button>
                         {canApprove && !isSp && e.status === 'Pending' && (
                           <>
-                            <button onClick={() => { setActionTarget({ ...e, action: 'approve' }); rst2() }} className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-600 hover:bg-green-100 rounded text-xs font-medium transition-colors" aria-label="Approve expense"><Check size={14} /> Approve</button>
-                            <button onClick={() => { setActionTarget({ ...e, action: 'reject' }); rst2() }} className="flex items-center gap-1 px-2 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded text-xs font-medium transition-colors" aria-label="Reject expense"><X size={14} /> Reject</button>
+                            <button onClick={() => { setActionTarget({ ...e, action: 'approve' }); rst2() }} className="action-btn-green" aria-label="Approve expense"><Check size={14} /> Approve</button>
+                            <button onClick={() => { setActionTarget({ ...e, action: 'reject' }); rst2() }} className="action-btn-red" aria-label="Reject expense"><X size={14} /> Reject</button>
                           </>
                         )}
                         {isSp && e.status === 'Rejected' && (
-                          <button onClick={() => handleDuplicate(e)} className="flex items-center gap-1 px-2 py-1 bg-orange-50 text-orange-600 hover:bg-orange-100 rounded text-xs font-medium transition-colors" aria-label="Duplicate rejected expense"><Copy size={14} /> Duplicate</button>
+                          <button onClick={() => handleDuplicate(e)} className="action-btn-orange" aria-label="Duplicate rejected expense"><Copy size={14} /> Duplicate</button>
                         )}
                       </div>
                     </td>
