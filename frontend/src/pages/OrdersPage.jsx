@@ -16,6 +16,8 @@ export default function OrdersPage() {
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1 })
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [viewOrder, setViewOrder] = useState(null)
@@ -34,12 +36,12 @@ export default function OrdersPage() {
   const fetch = async (page = 1) => {
     setLoading(true)
     try {
-      const r = await api.get('/orders', { params: { page, limit: 10, search: debouncedSearch, status: statusFilter } })
+      const r = await api.get('/orders', { params: { page, limit: 10, search: debouncedSearch, status: statusFilter, startDate: startDate || undefined, endDate: endDate || undefined } })
       setData(r.data.data); setPagination(r.data.pagination)
     } catch { toast.error('Failed to load orders. Please refresh the page.') } finally { setLoading(false) }
   }
 
-  useEffect(() => { fetch() }, [debouncedSearch, statusFilter])
+  useEffect(() => { fetch() }, [debouncedSearch, statusFilter, startDate, endDate])
 
   const openCreate = () => { 
     reset({ items: [{ itemId: '', quantity: 1, unitPrice: 0 }] })
@@ -112,6 +114,15 @@ export default function OrdersPage() {
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="input w-full sm:w-40">
             {STATUSES.map(s => <option key={s} value={s}>{s || 'All Status'}</option>)}
           </select>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <label className="text-xs text-gray-500 whitespace-nowrap">From</label>
+            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="input w-full sm:w-40" />
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <label className="text-xs text-gray-500 whitespace-nowrap">To</label>
+            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="input w-full sm:w-40" />
+          </div>
+          {(startDate || endDate) && <button onClick={() => { setStartDate(''); setEndDate('') }} className="btn-secondary btn-sm whitespace-nowrap">Clear Dates</button>}
         </div>
 
         {loading ? <LoadingSpinner />

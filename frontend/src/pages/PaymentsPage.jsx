@@ -16,6 +16,8 @@ export default function PaymentsPage() {
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1 })
   const [statusFilter, setStatusFilter] = useState('')
   const [search, setSearch] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [viewItem, setViewItem] = useState(null)
@@ -33,12 +35,12 @@ export default function PaymentsPage() {
   const fetch = async (page = 1) => {
     setLoading(true)
     try {
-      const r = await api.get('/payments', { params: { page, limit: 10, status: statusFilter, search: debouncedSearch } })
+      const r = await api.get('/payments', { params: { page, limit: 10, status: statusFilter, search: debouncedSearch, startDate: startDate || undefined, endDate: endDate || undefined } })
       setData(r.data.data); setPagination(r.data.pagination)
     } catch { toast.error('Failed to load payments. Please refresh the page.') } finally { setLoading(false) }
   }
 
-  useEffect(() => { fetch() }, [statusFilter, debouncedSearch])
+  useEffect(() => { fetch() }, [statusFilter, debouncedSearch, startDate, endDate])
 
   useEffect(() => {
     if (isSp) {
@@ -87,7 +89,7 @@ export default function PaymentsPage() {
         actions={isSp && <button onClick={() => { reset({}); setModalOpen(true) }} className="btn-primary"><Plus size={16} />Record Payment</button>} />
 
       <div className="card">
-        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-3 mb-4">
           <SearchInput value={search} onChange={setSearch} placeholder="Search receipt, purpose..." />
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="input w-full sm:w-40">
             <option value="">All Status</option>
@@ -95,6 +97,15 @@ export default function PaymentsPage() {
             <option value="Verified">Verified</option>
             <option value="Rejected">Rejected</option>
           </select>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <label className="text-xs text-gray-500 whitespace-nowrap">From</label>
+            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="input w-full sm:w-40" />
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <label className="text-xs text-gray-500 whitespace-nowrap">To</label>
+            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="input w-full sm:w-40" />
+          </div>
+          {(startDate || endDate) && <button onClick={() => { setStartDate(''); setEndDate('') }} className="btn-secondary btn-sm whitespace-nowrap">Clear Dates</button>}
         </div>
 
         {loading ? <LoadingSpinner />
