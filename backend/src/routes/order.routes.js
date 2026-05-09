@@ -20,7 +20,7 @@ router.patch('/:id/submit', authorize('Salesperson', 'SuperAdmin', 'Admin'), ctr
 router.patch('/:id/approve', authorize('SuperAdmin', 'Admin'), checkModulePermission('OrderManagement', 'FullAccess'), ctrl.approveOrder);
 router.patch('/:id/dispatch', authorize('SuperAdmin', 'Admin'), checkModulePermission('OrderManagement', 'FullAccess'), ctrl.dispatchOrder);
 router.patch('/:id/deliver', authorize('SuperAdmin', 'Admin'), checkModulePermission('OrderManagement', 'FullAccess'), ctrl.deliverOrder);
-router.patch('/:id/cancel', ctrl.cancelOrder);
+router.patch('/:id/cancel', authorize('SuperAdmin', 'Admin'), checkModulePermission('OrderManagement', 'FullAccess'), ctrl.cancelOrder);
 
 // Print
 router.get('/:id/print', ctrl.getPrintData);

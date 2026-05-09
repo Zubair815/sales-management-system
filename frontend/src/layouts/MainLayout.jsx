@@ -84,6 +84,7 @@ export default function MainLayout({ children }) {
   const items = (navItems[user?.role] || []).filter(item =>
     !item.module || canAccess(item.module)
   )
+  const displayRole = user?.role === 'SuperAdmin' ? 'Super Admin' : user?.role
 
   const handleLogout = async () => {
     await logout()
@@ -123,13 +124,13 @@ export default function MainLayout({ children }) {
           )}
           {/* Desktop sidebar toggle only */}
           {!isMobile && (
-            <button onClick={toggleSidebar} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 ml-auto">
+            <button onClick={toggleSidebar} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 ml-auto" aria-label={sidebarOpen ? 'Collapse navigation' : 'Expand navigation'}>
               {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
           )}
           {/* Mobile close button */}
           {isMobile && (
-            <button onClick={() => setSidebarOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 ml-auto">
+            <button onClick={() => setSidebarOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 ml-auto" aria-label="Close navigation">
               <X size={18} />
             </button>
           )}
@@ -158,14 +159,14 @@ export default function MainLayout({ children }) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">{user?.name}</p>
-                <p className="text-xs text-gray-500 truncate">{user?.role}</p>
+                <p className="text-xs text-gray-500 truncate">{displayRole}</p>
               </div>
-              <button onClick={handleLogout} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded-lg text-gray-400 transition-colors" title="Logout">
+              <button onClick={handleLogout} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded-lg text-gray-400 transition-colors" title="Logout" aria-label="Log out">
                 <LogOut size={16} />
               </button>
             </div>
           ) : (
-            <button onClick={handleLogout} className="w-full flex justify-center p-1.5 hover:bg-red-50 hover:text-red-600 rounded-lg text-gray-400 transition-colors" title="Logout">
+            <button onClick={handleLogout} className="w-full flex justify-center p-1.5 hover:bg-red-50 hover:text-red-600 rounded-lg text-gray-400 transition-colors" title="Logout" aria-label="Log out">
               <LogOut size={16} />
             </button>
           )}
@@ -200,8 +201,8 @@ export default function MainLayout({ children }) {
               user?.role === 'SuperAdmin' ? 'bg-purple-100 text-purple-700' :
               user?.role === 'Admin' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
             }`}>
-              <span className="hidden sm:inline">{user?.role === 'SuperAdmin' ? 'Developer' : user?.role}</span>
-              <span className="sm:hidden">{user?.role === 'SuperAdmin' ? 'Dev' : user?.role?.slice(0, 5)}</span>
+              <span className="hidden sm:inline">{displayRole}</span>
+              <span className="sm:hidden">{displayRole}</span>
             </div>
           </div>
         </header>

@@ -1,3 +1,4 @@
+import { Children, cloneElement, isValidElement, useId } from 'react'
 import { X, ChevronLeft, ChevronRight, AlertTriangle, Loader2 } from 'lucide-react'
 import Skeleton from './Skeleton.jsx'
 
@@ -151,10 +152,27 @@ export function StatCard({ icon: Icon, label, value, sub, color = 'blue' }) {
 
 // Form field wrapper
 export function FormField({ label, error, required, children }) {
+  const generatedId = useId().replace(/:/g, '')
+  const childArray = Children.toArray(children)
+  const bindableIndex = childArray.findIndex(child =>
+    isValidElement(child) && ['input', 'select', 'textarea'].includes(child.type)
+  )
+  const bindableChild = bindableIndex >= 0 ? childArray[bindableIndex] : null
+  const baseId = String(bindableChild?.props?.name || label || generatedId)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  const fieldId = bindableChild?.props?.id || `field-${baseId || generatedId}`
+  const boundChildren = childArray.map((child, index) => {
+    if (index !== bindableIndex || !isValidElement(child)) return child
+    return cloneElement(child, { id: fieldId })
+  })
+
   return (
     <div>
-      <label className="label">{label}{required && <span className="text-red-500 ml-1">*</span>}</label>
-      {children}
+      <label htmlFor={fieldId} className="label">{label}{required && <span className="text-red-500 ml-1">*</span>}</label>
+      {boundChildren}
       {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
     </div>
   )

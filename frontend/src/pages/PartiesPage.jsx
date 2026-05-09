@@ -32,7 +32,7 @@ export function PartiesPage() {
     try {
       const r = await api.get('/parties', { params: { page, limit: 10, search: debouncedSearch } })
       setData(r.data.data); setPagination(r.data.pagination)
-    } catch { toast.error('Failed to load parties. Please refresh.') } finally { setLoading(false) }
+    } catch { toast.error('Failed to load parties. Please refresh the page.') } finally { setLoading(false) }
   }
 
   useEffect(() => { fetch() }, [debouncedSearch])
@@ -46,17 +46,17 @@ export function PartiesPage() {
       if (editItem) await api.put(`/parties/${editItem.id}`, d)
       else await api.post('/parties', d)
       toast.success(editItem ? 'Updated' : 'Created'); setModalOpen(false); fetch()
-    } catch (e) { toast.error(e.response?.data?.message || 'Error') } finally { setSubmitting(false) }
+    } catch (e) { toast.error(e.response?.data?.message || 'Failed to save party. Please check the party details and try again.') } finally { setSubmitting(false) }
   }
 
   const toggleStatus = async (item) => {
     setActionLoadingId(`toggle_${item.id}`)
-    try { await api.patch(`/parties/${item.id}/status`); toast.success('Status updated'); fetch() } catch { toast.error('Failed to toggle party status.') } finally { setActionLoadingId(null) }
+    try { await api.patch(`/parties/${item.id}/status`); toast.success('Status updated'); fetch() } catch { toast.error('Failed to update party status. Please refresh the page and try again.') } finally { setActionLoadingId(null) }
   }
 
   const deleteItem = async () => {
     setConfirmLoading(true)
-    try { await api.delete(`/parties/${deleteTarget.id}`); toast.success('Party deleted'); setDeleteTarget(null); fetch() } catch { toast.error('Failed to delete party.') } finally { setConfirmLoading(false) }
+    try { await api.delete(`/parties/${deleteTarget.id}`); toast.success('Party deleted'); setDeleteTarget(null); fetch() } catch { toast.error('Failed to delete party. Please refresh the page and try again.') } finally { setConfirmLoading(false) }
   }
 
   return (

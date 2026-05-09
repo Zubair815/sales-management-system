@@ -31,7 +31,7 @@ export default function InventoryPage() {
     try {
       const r = await api.get('/inventory', { params: { page, limit: 12, search: debouncedSearch } })
       setData(r.data.data); setPagination(r.data.pagination)
-    } catch { toast.error('Failed to load inventory. Please refresh.') } finally { setLoading(false) }
+    } catch { toast.error('Failed to load inventory items. Please refresh the page.') } finally { setLoading(false) }
   }
 
   useEffect(() => { fetch() }, [debouncedSearch])
@@ -45,12 +45,12 @@ export default function InventoryPage() {
       if (editItem) await api.put(`/inventory/${editItem.id}`, d)
       else await api.post('/inventory', d)
       toast.success(editItem ? 'Updated' : 'Created'); setModalOpen(false); fetch()
-    } catch (e) { toast.error(e.response?.data?.message || 'Error') } finally { setSubmitting(false) }
+    } catch (e) { toast.error(e.response?.data?.message || 'Failed to save inventory item. Please check the item details and try again.') } finally { setSubmitting(false) }
   }
 
   const deleteItem = async () => {
     setConfirmLoading(true)
-    try { await api.delete(`/inventory/${deleteTarget.id}`); toast.success('Deleted'); setDeleteTarget(null); fetch() } catch { toast.error('Failed to delete item.') } finally { setConfirmLoading(false) }
+    try { await api.delete(`/inventory/${deleteTarget.id}`); toast.success('Deleted'); setDeleteTarget(null); fetch() } catch { toast.error('Failed to delete inventory item. Please refresh the page and try again.') } finally { setConfirmLoading(false) }
   }
 
   const adjustStock = async (d) => {
@@ -58,7 +58,7 @@ export default function InventoryPage() {
     try {
       await api.patch(`/inventory/${stockTarget.id}/stock`, { adjustment: parseInt(d.adjustment), reason: d.reason })
       toast.success('Stock adjusted'); setStockTarget(null); rst2(); fetch()
-    } catch (e) { toast.error(e.response?.data?.message || 'Error') } finally { setSubmitting(false) }
+    } catch (e) { toast.error(e.response?.data?.message || 'Failed to adjust inventory stock. Please check the adjustment and try again.') } finally { setSubmitting(false) }
   }
 
   return (

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import api from '../services/api'
 import toast from 'react-hot-toast'
-import { PageHeader, StatCard } from '../components/index.jsx'
+import { EmptyState, PageHeader, StatCard } from '../components/index.jsx'
 import { BarChart3, Download, TrendingUp, Package, CreditCard, Receipt, Users } from 'lucide-react'
 import { Bar, Doughnut } from 'react-chartjs-2'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend, Title } from 'chart.js'
@@ -30,7 +30,7 @@ export default function ReportsPage() {
       const params = Object.fromEntries(Object.entries(filters).filter(([, v]) => v))
       const r = await api.get(`/reports/${activeReport}`, { params })
       setData(r.data.data)
-    } catch (e) { toast.error('Failed to generate report') }
+    } catch (e) { toast.error('Failed to generate report. Please check the filters and try again.') }
     finally { setLoading(false) }
   }
 
@@ -41,7 +41,7 @@ export default function ReportsPage() {
       const ext = format === 'csv' ? 'csv' : 'xlsx'
       const url = window.URL.createObjectURL(new Blob([r.data]))
       const a = document.createElement('a'); a.href = url; a.download = `${activeReport}-report.${ext}`; a.click()
-    } catch { toast.error('Export failed') }
+    } catch { toast.error('Failed to export report. Please generate the report and try again.') }
   }
 
   return (
@@ -64,12 +64,12 @@ export default function ReportsPage() {
         <h3 className="font-semibold text-gray-700 mb-4 text-sm">Filters</h3>
         <div className="flex flex-col sm:flex-row flex-wrap gap-3">
           <div className="w-full sm:w-auto">
-            <label className="label text-xs">Start Date</label>
-            <input type="date" value={filters.startDate} onChange={e => setFilters(f => ({ ...f, startDate: e.target.value }))} className="input text-sm" />
+            <label htmlFor="report-start-date" className="label text-xs">Start Date</label>
+            <input id="report-start-date" type="date" value={filters.startDate} onChange={e => setFilters(f => ({ ...f, startDate: e.target.value }))} className="input text-sm" />
           </div>
           <div className="w-full sm:w-auto">
-            <label className="label text-xs">End Date</label>
-            <input type="date" value={filters.endDate} onChange={e => setFilters(f => ({ ...f, endDate: e.target.value }))} className="input text-sm" />
+            <label htmlFor="report-end-date" className="label text-xs">End Date</label>
+            <input id="report-end-date" type="date" value={filters.endDate} onChange={e => setFilters(f => ({ ...f, endDate: e.target.value }))} className="input text-sm" />
           </div>
           <div className="flex items-end gap-2 flex-wrap w-full sm:w-auto">
             <button onClick={loadReport} disabled={loading} className="btn-primary w-full sm:w-auto">
@@ -106,6 +106,7 @@ export default function ReportsPage() {
 
 function OrderPaymentReport({ data }) {
   const { report = [], summary = {} } = data
+  const hasRows = report.length > 0
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -115,7 +116,8 @@ function OrderPaymentReport({ data }) {
         <StatCard icon={TrendingUp} label="Outstanding" value={fmt(summary.outstandingAmount)} color="red" />
       </div>
       <div className="card">
-        <div className="table-container"><table className="table responsive-table"><thead><tr><th>Order #</th><th>Date</th><th>Party</th><th>Salesperson</th><th>Order Amount</th><th>Paid</th><th>Balance</th></tr></thead>
+        {hasRows ? (
+          <div className="table-container"><table className="table responsive-table"><thead><tr><th>Order #</th><th>Date</th><th>Party</th><th>Salesperson</th><th>Order Amount</th><th>Paid</th><th>Balance</th></tr></thead>
             <tbody>
               {report.map(r => (
                 <tr key={r.orderId} className={r.isOverdue ? 'bg-red-50' : ''}>
@@ -130,6 +132,9 @@ function OrderPaymentReport({ data }) {
               ))}
             </tbody>
           </table></div>
+        ) : (
+          <EmptyState icon={TrendingUp} title="No order and payment data found for selected date range" description="Adjust the filters and generate the report again." />
+        )}
       </div>
     </div>
   )
@@ -149,8 +154,9 @@ function ExpenseReport({ data }) {
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {typeLabels.length > 0 && <div className="card"><h3 className="section-title">By Type</h3><Doughnut data={chartData} options={{ responsive: true, plugins: { legend: { position: 'bottom' } } }} /></div>}
-        <div className="card lg:col-span-2">
-          <div className="table-container"><table className="table responsive-table"><thead><tr><th>Salesperson</th><th>Date</th><th>Type</th><th>Amount</th><th>Status</th></tr></thead>
+        <div className={`card ${typeLabels.length > 0 ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
+          {expenses.length > 0 ? (
+            <div className="table-container"><table className="table responsive-table"><thead><tr><th>Salesperson</th><th>Date</th><th>Type</th><th>Amount</th><th>Status</th></tr></thead>
             <tbody>{expenses.map(e => (<tr key={e.id}>
               <td data-label="Salesperson">{e.salesperson?.name}</td>
               <td data-label="Date" className="text-xs">{new Date(e.expenseDate).toLocaleDateString()}</td>
@@ -159,6 +165,9 @@ function ExpenseReport({ data }) {
               <td data-label="Status"><span className={`badge ${e.status === 'Approved' ? 'badge-green' : e.status === 'Rejected' ? 'badge-red' : 'badge-yellow'}`}>{e.status}</span></td>
             </tr>))}</tbody>
           </table></div>
+          ) : (
+            <EmptyState icon={Receipt} title="No expenses recorded for this period" description="Adjust the date filters and generate the report again." />
+          )}
         </div>
       </div>
     </div>
@@ -167,6 +176,7 @@ function ExpenseReport({ data }) {
 
 function PaymentCollectionReport({ data }) {
   const { payments = [], summary = {} } = data
+  const hasRows = payments.length > 0
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -176,7 +186,8 @@ function PaymentCollectionReport({ data }) {
         <StatCard icon={CreditCard} label="Total Records" value={summary.totalPayments} color="blue" />
       </div>
       <div className="card">
-        <div className="table-container"><table className="table responsive-table"><thead><tr><th>Receipt #</th><th>Date</th><th>Party</th><th>Salesperson</th><th>Amount</th><th>Mode</th><th>Status</th></tr></thead>
+        {hasRows ? (
+          <div className="table-container"><table className="table responsive-table"><thead><tr><th>Receipt #</th><th>Date</th><th>Party</th><th>Salesperson</th><th>Amount</th><th>Mode</th><th>Status</th></tr></thead>
           <tbody>{payments.map(p => (<tr key={p.id}>
             <td data-label="Receipt #" className="font-mono text-xs">{p.receiptNumber}</td>
             <td data-label="Date" className="text-xs">{new Date(p.paymentDate).toLocaleDateString()}</td>
@@ -187,6 +198,9 @@ function PaymentCollectionReport({ data }) {
             <td data-label="Status"><span className={`badge ${p.status === 'Verified' ? 'badge-green' : p.status === 'Rejected' ? 'badge-red' : 'badge-yellow'}`}>{p.status}</span></td>
           </tr>))}</tbody>
         </table></div>
+        ) : (
+          <EmptyState icon={CreditCard} title="No payment collections found for selected date range" description="Adjust the filters and generate the report again." />
+        )}
       </div>
     </div>
   )
@@ -194,10 +208,12 @@ function PaymentCollectionReport({ data }) {
 
 function SalespersonReport({ data }) {
   const { report = [] } = data
+  const hasRows = report.length > 0
   return (
     <div className="space-y-4">
       <div className="card">
-        <div className="table-container"><table className="table responsive-table"><thead><tr><th>Rank</th><th>Salesperson</th><th>Region</th><th>Orders</th><th>Revenue</th><th>Avg Order</th><th>Expenses</th><th>Collections</th><th>Target %</th></tr></thead>
+        {hasRows ? (
+          <div className="table-container"><table className="table responsive-table"><thead><tr><th>Rank</th><th>Salesperson</th><th>Region</th><th>Orders</th><th>Revenue</th><th>Avg Order</th><th>Expenses</th><th>Collections</th><th>Target %</th></tr></thead>
           <tbody>{report.map((sp, i) => (<tr key={i}>
             <td data-label="Rank"><span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>{i+1}</span></td>
             <td data-label="Salesperson"><div><p className="font-medium">{sp.salesperson}</p><p className="text-xs text-gray-400">{sp.employeeId}</p></div></td>
@@ -210,6 +226,9 @@ function SalespersonReport({ data }) {
             <td data-label="Target %">{sp.targetAchievement ? <span className={`badge ${parseFloat(sp.targetAchievement) >= 100 ? 'badge-green' : 'badge-yellow'}`}>{sp.targetAchievement}%</span> : '-'}</td>
           </tr>))}</tbody>
         </table></div>
+        ) : (
+          <EmptyState icon={Users} title="No salesperson performance data found for selected filters" description="Adjust the filters and generate the report again." />
+        )}
       </div>
     </div>
   )
@@ -217,6 +236,7 @@ function SalespersonReport({ data }) {
 
 function InventoryReport({ data }) {
   const { report = [], summary = {} } = data
+  const hasRows = report.length > 0
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -226,7 +246,8 @@ function InventoryReport({ data }) {
         <StatCard icon={Package} label="Out of Stock" value={summary.outOfStock} color="red" />
       </div>
       <div className="card">
-        <div className="table-container"><table className="table responsive-table"><thead><tr><th>SKU</th><th>Name</th><th>Category</th><th>Stock</th><th>Selling Price</th><th>Total Value</th><th>Status</th></tr></thead>
+        {hasRows ? (
+          <div className="table-container"><table className="table responsive-table"><thead><tr><th>SKU</th><th>Name</th><th>Category</th><th>Stock</th><th>Selling Price</th><th>Total Value</th><th>Status</th></tr></thead>
           <tbody>{report.map(i => (<tr key={i.id} className={i.isLowStock ? 'bg-red-50' : ''}>
             <td data-label="SKU" className="font-mono text-xs text-blue-700">{i.sku}</td>
             <td data-label="Name" className="font-medium">{i.name}</td>
@@ -237,6 +258,9 @@ function InventoryReport({ data }) {
             <td data-label="Status"><span className={`badge ${i.status === 'Active' ? 'badge-green' : 'badge-gray'}`}>{i.status}</span></td>
           </tr>))}</tbody>
         </table></div>
+        ) : (
+          <EmptyState icon={Package} title="No inventory valuation records found" description="Add active inventory items or generate the report again after inventory is updated." />
+        )}
       </div>
     </div>
   )

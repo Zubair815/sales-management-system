@@ -36,7 +36,7 @@ export default function OrdersPage() {
     try {
       const r = await api.get('/orders', { params: { page, limit: 10, search: debouncedSearch, status: statusFilter } })
       setData(r.data.data); setPagination(r.data.pagination)
-    } catch { toast.error('Failed to load orders. Please refresh.') } finally { setLoading(false) }
+    } catch { toast.error('Failed to load orders. Please refresh the page.') } finally { setLoading(false) }
   }
 
   useEffect(() => { fetch() }, [debouncedSearch, statusFilter])
@@ -48,7 +48,7 @@ export default function OrdersPage() {
       Promise.all([
         api.get('/parties', { params: { limit: 500, status: 'Active' } }),
         api.get('/inventory', { params: { limit: 500, status: 'Active' } }),
-      ]).then(([p, i]) => { setParties(p.data.data); setInventory(i.data.data) }).catch(() => toast.error('Failed to load parties or inventory.'))
+      ]).then(([p, i]) => { setParties(p.data.data); setInventory(i.data.data) }).catch(() => toast.error('Failed to load parties or inventory items. Please close the order form and try again.'))
     }
   }
 
@@ -59,7 +59,7 @@ export default function OrdersPage() {
       if (!items.length) { setSubmitting(false); return toast.error('Add at least one item') }
       await api.post('/orders', { partyId: d.partyId, items, notes: d.notes })
       toast.success('Order prepared and saved to drafts'); setModalOpen(false); fetch()
-    } catch (e) { toast.error(e.response?.data?.message || 'Error') } finally { setSubmitting(false) }
+    } catch (e) { toast.error(e.response?.data?.message || 'Failed to save order draft. Please check the order details and try again.') } finally { setSubmitting(false) }
   }
 
   const statusAction = async (id, action) => {
@@ -68,7 +68,7 @@ export default function OrdersPage() {
       await api.patch(`/orders/${id}/${action}`)
       toast.success(`Order ${action}d`); fetch()
       if (viewOrder) setViewOrder(null)
-    } catch (e) { toast.error(e.response?.data?.message || 'Failed') } finally { setActionLoadingId(null) }
+    } catch (e) { toast.error(e.response?.data?.message || `Failed to ${action} order. Please refresh the page and try again.`) } finally { setActionLoadingId(null) }
   }
 
   // --- NEW: Submit order to admin
@@ -79,14 +79,14 @@ export default function OrdersPage() {
       toast.success('Order submitted to Admin successfully!')
       fetch()
       if (viewOrder) setViewOrder(null)
-    } catch (e) { toast.error(e.response?.data?.message || 'Failed to submit order') } finally { setActionLoadingId(null) }
+    } catch (e) { toast.error(e.response?.data?.message || 'Failed to submit order. Please refresh the page and try again.') } finally { setActionLoadingId(null) }
   }
 
   const openPrint = async (orderId) => {
     try {
       const r = await api.get(`/orders/${orderId}/print`)
       setPrintOrder(r.data.data)
-    } catch { toast.error('Failed to load print data') }
+    } catch { toast.error('Failed to load order print data. Please try opening the print preview again.') }
   }
 
   const watchItems = watch('items')
@@ -201,7 +201,7 @@ export default function OrdersPage() {
                     </span>
                   </div>
                   <div className="sm:col-span-1 flex items-center h-10">
-                    {fields.length > 1 && <button type="button" onClick={() => remove(idx)} className="p-1 hover:text-red-500 text-gray-300"><Trash2 size={14} /></button>}
+                    {fields.length > 1 && <button type="button" onClick={() => remove(idx)} className="p-1 hover:text-red-500 text-gray-300" aria-label={`Remove item row ${idx + 1}`}><Trash2 size={14} /></button>}
                   </div>
                 </div>
               ))}

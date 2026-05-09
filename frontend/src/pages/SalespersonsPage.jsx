@@ -21,7 +21,7 @@ function useSalespersonsData(debouncedSearch) {
     try {
       const r = await api.get('/salespersons', { params: { page, limit: 10, search: debouncedSearch } })
       setData(r.data.data); setPagination(r.data.pagination)
-    } catch { toast.error('Failed to load salespersons. Please refresh.') } finally { setLoading(false) }
+    } catch { toast.error('Failed to load salespersons. Please refresh the page.') } finally { setLoading(false) }
   }, [debouncedSearch])
 
   useEffect(() => { refetch() }, [refetch])
@@ -58,13 +58,13 @@ export default function SalespersonsPage() {
       if (editItem) await api.put(`/salespersons/${editItem.id}`, d)
       else await api.post('/salespersons', d)
       toast.success(editItem ? 'Updated' : 'Created'); setModalOpen(false); fetch()
-    } catch (e) { toast.error(e.response?.data?.message || 'Error') } finally { setSubmitting(false) }
+    } catch (e) { toast.error(e.response?.data?.message || 'Failed to save salesperson. Please check the salesperson details and try again.') } finally { setSubmitting(false) }
   }
 
   const toggleStatus = async (sp) => {
     setActionLoadingId(`toggle_${sp.id}`)
     try { await api.patch(`/salespersons/${sp.id}/status`); toast.success('Status updated'); fetch() }
-    catch { toast.error('Failed to toggle status.') } finally { setActionLoadingId(null) }
+    catch { toast.error('Failed to update salesperson status. Please refresh the page and try again.') } finally { setActionLoadingId(null) }
   }
 
 const deleteSp = async () => {
@@ -75,7 +75,7 @@ const deleteSp = async () => {
       setDeleteTarget(null); 
       fetch(); 
     } catch (error) { 
-      const errorMessage = error.response?.data?.message || 'Failed to delete salesperson';
+      const errorMessage = error.response?.data?.message || 'Failed to delete salesperson. Please refresh the page and try again.';
       toast.error(errorMessage);
       setDeleteTarget(null); 
     } finally { setConfirmLoading(false) }
@@ -84,7 +84,7 @@ const deleteSp = async () => {
   const resetPw = async (d) => {
     setSubmitting(true)
     try { await api.patch(`/salespersons/${resetTarget.id}/reset-password`, d); toast.success('Password reset'); setResetTarget(null); rst2() }
-    catch (e) { toast.error(e.response?.data?.message || 'Error') } finally { setSubmitting(false) }
+    catch (e) { toast.error(e.response?.data?.message || 'Failed to reset salesperson password. Please check the new password and try again.') } finally { setSubmitting(false) }
   }
 
   // FIX: L-11 — memoized table rows to prevent re-renders during typing

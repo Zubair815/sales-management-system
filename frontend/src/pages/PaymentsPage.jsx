@@ -35,15 +35,15 @@ export default function PaymentsPage() {
     try {
       const r = await api.get('/payments', { params: { page, limit: 10, status: statusFilter, search: debouncedSearch } })
       setData(r.data.data); setPagination(r.data.pagination)
-    } catch { toast.error('Failed to load payments. Please refresh.') } finally { setLoading(false) }
+    } catch { toast.error('Failed to load payments. Please refresh the page.') } finally { setLoading(false) }
   }
 
   useEffect(() => { fetch() }, [statusFilter, debouncedSearch])
 
   useEffect(() => {
     if (isSp) {
-      api.get('/parties', { params: { limit: 100 } }).then(r => setParties(r.data.data)).catch(() => toast.error('Failed to load parties.'))
-      api.get('/orders', { params: { limit: 100 } }).then(r => setOrders(r.data.data)).catch(() => toast.error('Failed to load orders.'))
+      api.get('/parties', { params: { limit: 100 } }).then(r => setParties(r.data.data)).catch(() => toast.error('Failed to load parties for the payment form. Please close the form and try again.'))
+      api.get('/orders', { params: { limit: 100 } }).then(r => setOrders(r.data.data)).catch(() => toast.error('Failed to load orders for the payment form. Please close the form and try again.'))
     }
   }, [isSp])
 
@@ -55,13 +55,13 @@ export default function PaymentsPage() {
       if (d.proof?.[0]) formData.set('proof', d.proof[0])
       await api.post('/payments', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
       toast.success('Payment recorded'); setModalOpen(false); reset(); fetch()
-    } catch (e) { toast.error(e.response?.data?.message || 'Error') } finally { setSubmitting(false) }
+    } catch (e) { toast.error(e.response?.data?.message || 'Failed to record payment. Please check the payment details and try again.') } finally { setSubmitting(false) }
   }
 
   const verify = async (id) => {
     setActionLoadingId(`verify_${id}`)
     try { await api.patch(`/payments/${id}/verify`); toast.success('Payment verified'); fetch() }
-    catch { toast.error('Failed to verify payment.') } finally { setActionLoadingId(null) }
+    catch { toast.error('Failed to verify payment. Please refresh the page and try again.') } finally { setActionLoadingId(null) }
   }
 
   const reject = async (d) => {
@@ -69,14 +69,14 @@ export default function PaymentsPage() {
     try {
       await api.patch(`/payments/${rejectTarget.id}/reject`, { rejectionReason: d.rejectionReason })
       toast.success('Payment rejected'); setRejectTarget(null); rst2(); fetch()
-    } catch { toast.error('Failed to reject payment.') } finally { setSubmitting(false) }
+    } catch { toast.error('Failed to reject payment. Please check the rejection reason and try again.') } finally { setSubmitting(false) }
   }
 
   const openPrint = async (payment) => {
     try {
       const template = await api.get('/print/templates/payment')
       setPrintItem({ payment, template: template.data.data })
-    } catch { toast.error('Failed to load print data.') }
+    } catch { toast.error('Failed to load payment receipt data. Please try opening the receipt again.') }
   }
 
   const MODES = ['Cash', 'Cheque', 'NEFT', 'UPI', 'Other']

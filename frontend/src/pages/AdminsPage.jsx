@@ -31,7 +31,7 @@ export default function AdminsPage() {
       const r = await api.get('/super-admin/admins', { params: { page, limit: 10, search: debouncedSearch } })
       setAdmins(r.data.data)
       setPagination(r.data.pagination)
-    } catch { toast.error('Failed to load admins') }
+    } catch { toast.error('Failed to load admin users. Please refresh the page.') }
     finally { setLoading(false) }
   }
 
@@ -51,7 +51,7 @@ export default function AdminsPage() {
         toast.success('Admin created')
       }
       setModalOpen(false); fetchAdmins()
-    } catch (e) { toast.error(e.response?.data?.message || 'Error') } finally { setSubmitting(false) }
+    } catch (e) { toast.error(e.response?.data?.message || 'Failed to save admin user. Please check the admin details and try again.') } finally { setSubmitting(false) }
   }
 
   const toggleStatus = async (admin) => {
@@ -59,7 +59,7 @@ export default function AdminsPage() {
     try {
       await api.patch(`/super-admin/admins/${admin.id}/status`)
       toast.success('Status updated'); fetchAdmins()
-    } catch { toast.error('Failed to update status') } finally { setActionLoadingId(null) }
+    } catch { toast.error('Failed to update admin status. Please refresh the page and try again.') } finally { setActionLoadingId(null) }
   }
 
   const deleteAdmin = async () => {
@@ -70,7 +70,7 @@ export default function AdminsPage() {
       setDeleteTarget(null); 
       fetchAdmins()
     } catch (error) { 
-      const errorMessage = error.response?.data?.message || 'Failed to delete admin';
+      const errorMessage = error.response?.data?.message || 'Failed to delete admin user. Please refresh the page and try again.';
       toast.error(errorMessage);
       setDeleteTarget(null);
     } finally { setConfirmLoading(false) }
@@ -81,7 +81,7 @@ export default function AdminsPage() {
     try {
       await api.patch(`/super-admin/admins/${resetTarget.id}/reset-password`, data)
       toast.success('Password reset'); setResetTarget(null); rst2()
-    } catch (e) { toast.error(e.response?.data?.message || 'Error') } finally { setSubmitting(false) }
+    } catch (e) { toast.error(e.response?.data?.message || 'Failed to reset admin password. Please check the new password and try again.') } finally { setSubmitting(false) }
   }
 
   return (
