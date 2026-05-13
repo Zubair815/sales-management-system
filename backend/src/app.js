@@ -55,7 +55,7 @@ app.use(helmet({
   },
 }));
 
-// --- UPDATED CORS CONFIGURATION ---
+// --- SECURED CORS CONFIGURATION ---
 const allowedOrigins = [
   'http://localhost:5173',
   'https://sales-management-system-ten.vercel.app' // Your live Vercel URL
@@ -66,6 +66,10 @@ if (process.env.FRONTEND_URL) {
   allowedOrigins.push(process.env.FRONTEND_URL);
 }
 
+// Only match YOUR Vercel preview URLs (e.g., sales-management-system-abc123-user.vercel.app)
+// This prevents attacker-deployed apps on *.vercel.app from passing CORS.
+const VERCEL_PREVIEW_REGEX = /^https:\/\/sales-management-system[a-z0-9-]*\.vercel\.app$/;
+
 app.use(cors({
   origin: function (origin, callback) {
     // allow requests with no origin (like mobile apps, curl, or Postman)
@@ -74,8 +78,8 @@ app.use(cors({
     // Allow exact matches from the allowed list
     if (allowedOrigins.indexOf(origin) !== -1) return callback(null, true);
 
-    // Allow all Vercel preview deployments (*.vercel.app)
-    if (origin.endsWith('.vercel.app')) return callback(null, true);
+    // Allow only YOUR Vercel preview deployments
+    if (VERCEL_PREVIEW_REGEX.test(origin)) return callback(null, true);
 
     var msg = 'The CORS policy for this site does not allow access from the specified Origin.';
     return callback(new Error(msg), false);

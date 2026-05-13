@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const prisma = require('../config/database');
 const { successResponse, errorResponse, paginatedResponse } = require('../utils/response');
 const { createAuditLog } = require('../utils/audit');
+const { toMoney } = require('../utils/money');
 
 const SALT = parseInt(process.env.BCRYPT_SALT_ROUNDS) || 10;
 
@@ -59,7 +60,7 @@ const createSalesperson = async (req, res) => {
 
     const hashed = await bcrypt.hash(password, SALT);
     const sp = await prisma.salesperson.create({
-      data: { employeeId, name, email: email?.toLowerCase(), phone, password: hashed, region, jobRole, targetAmount: targetAmount ? parseFloat(targetAmount) : null, budgetAmount: budgetAmount ? parseFloat(budgetAmount) : null },
+      data: { employeeId, name, email: email?.toLowerCase(), phone, password: hashed, region, jobRole, targetAmount: targetAmount ? toMoney(targetAmount) : null, budgetAmount: budgetAmount ? toMoney(budgetAmount) : null },
     });
 
     await createAuditLog({ userId: req.user.id, userType: req.user.role, action: 'CREATE_SALESPERSON', module: 'SalespersonManagement', recordId: sp.id, newValues: { employeeId, name }, ipAddress: req.ip });
@@ -84,7 +85,7 @@ const updateSalesperson = async (req, res) => {
 
     const sp = await prisma.salesperson.update({
       where: { id: req.params.id },
-      data: { ...(name && { name }), ...(email && { email: email.toLowerCase() }), ...(phone && { phone }), ...(region !== undefined && { region }), ...(jobRole !== undefined && { jobRole }), ...(targetAmount !== undefined && { targetAmount: parseFloat(targetAmount) }), ...(budgetAmount !== undefined && { budgetAmount: parseFloat(budgetAmount) }) },
+      data: { ...(name && { name }), ...(email && { email: email.toLowerCase() }), ...(phone && { phone }), ...(region !== undefined && { region }), ...(jobRole !== undefined && { jobRole }), ...(targetAmount !== undefined && { targetAmount: toMoney(targetAmount) }), ...(budgetAmount !== undefined && { budgetAmount: toMoney(budgetAmount) }) },
     });
 
     await createAuditLog({ userId: req.user.id, userType: req.user.role, action: 'UPDATE_SALESPERSON', module: 'SalespersonManagement', recordId: sp.id, ipAddress: req.ip });

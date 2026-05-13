@@ -1,5 +1,7 @@
 const prisma = require('../config/database');
 const { successResponse, errorResponse } = require('../utils/response');
+const { toMoney, sumMoney } = require('../utils/money');
+const logger = require('../utils/logger');
 const ExcelJS = require('exceljs');
 
 const buildDateFilter = (startDate, endDate) => {
@@ -29,25 +31,29 @@ const orderPaymentReport = async (req, res) => {
     });
 
     const report = orders.map(o => {
-      const totalPaid = o.payments.reduce((s, p) => s + parseFloat(p.amount), 0);
-      const balance = parseFloat(o.grandTotal) - totalPaid;
+      const totalPaid = sumMoney(o.payments, p => p.amount);
+      const orderAmount = toMoney(o.grandTotal);
+      const balance = toMoney(orderAmount - totalPaid);
       return {
         orderId: o.id, orderNumber: o.orderNumber, date: o.createdAt,
         party: o.party.name, salesperson: o.salesperson.name,
-        orderAmount: parseFloat(o.grandTotal), paymentReceived: totalPaid,
+        orderAmount, paymentReceived: totalPaid,
         balanceDue: balance, isOverdue: balance > 0 && new Date() > new Date(o.createdAt.getTime() + 30 * 24 * 60 * 60 * 1000),
       };
     });
 
     const summary = {
       totalOrders: report.length,
-      totalAmount: report.reduce((s, r) => s + r.orderAmount, 0),
-      totalPayments: report.reduce((s, r) => s + r.paymentReceived, 0),
-      outstandingAmount: report.reduce((s, r) => s + r.balanceDue, 0),
+      totalAmount: sumMoney(report, r => r.orderAmount),
+      totalPayments: sumMoney(report, r => r.paymentReceived),
+      outstandingAmount: sumMoney(report, r => r.balanceDue),
     };
 
     return successResponse(res, { report, summary });
-  } catch (e) { return errorResponse(res, 'Failed to generate report', 500); }
+  } catch (e) { 
+    logger.error('Failed to generate order payment report:', e);
+    return errorResponse(res, 'Failed to generate report', 500); 
+  }
 };
 
 const expenseBudgetReport = async (req, res) => {
@@ -71,20 +77,26 @@ const expenseBudgetReport = async (req, res) => {
     const byType = {};
     expenses.forEach(e => {
       if (!byType[e.expenseType.name]) byType[e.expenseType.name] = { total: 0, approved: 0, rejected: 0, pending: 0 };
-      byType[e.expenseType.name].total += parseFloat(e.amount);
-      byType[e.expenseType.name][e.status.toLowerCase()] += parseFloat(e.amount);
+      byType[e.expenseType.name].total = toMoney(byType[e.expenseType.name].total + toMoney(e.amount));
+      const statusKey = e.status.toLowerCase();
+      if (byType[e.expenseType.name][statusKey] !== undefined) {
+        byType[e.expenseType.name][statusKey] = toMoney(byType[e.expenseType.name][statusKey] + toMoney(e.amount));
+      }
     });
 
     const summary = {
-      totalExpenses: expenses.reduce((s, e) => s + parseFloat(e.amount), 0),
-      approved: expenses.filter(e => e.status === 'Approved').reduce((s, e) => s + parseFloat(e.amount), 0),
-      rejected: expenses.filter(e => e.status === 'Rejected').reduce((s, e) => s + parseFloat(e.amount), 0),
-      pending: expenses.filter(e => e.status === 'Pending').reduce((s, e) => s + parseFloat(e.amount), 0),
+      totalExpenses: sumMoney(expenses, e => e.amount),
+      approved: sumMoney(expenses.filter(e => e.status === 'Approved'), e => e.amount),
+      rejected: sumMoney(expenses.filter(e => e.status === 'Rejected'), e => e.amount),
+      pending: sumMoney(expenses.filter(e => e.status === 'Pending'), e => e.amount),
       byType,
     };
 
     return successResponse(res, { expenses, summary });
-  } catch (e) { return errorResponse(res, 'Failed to generate report', 500); }
+  } catch (e) { 
+    logger.error('Failed to generate expense budget report:', e);
+    return errorResponse(res, 'Failed to generate report', 500); 
+  }
 };
 
 const paymentCollectionReport = async (req, res) => {
@@ -109,16 +121,24 @@ const paymentCollectionReport = async (req, res) => {
     });
 
     const summary = {
-      totalCollected: payments.filter(p => p.status === 'Verified').reduce((s, p) => s + parseFloat(p.amount), 0),
-      pendingVerification: payments.filter(p => p.status === 'Pending').reduce((s, p) => s + parseFloat(p.amount), 0),
-      rejected: payments.filter(p => p.status === 'Rejected').reduce((s, p) => s + parseFloat(p.amount), 0),
+      totalCollected: sumMoney(payments.filter(p => p.status === 'Verified'), p => p.amount),
+      pendingVerification: sumMoney(payments.filter(p => p.status === 'Pending'), p => p.amount),
+      rejected: sumMoney(payments.filter(p => p.status === 'Rejected'), p => p.amount),
       totalPayments: payments.length,
     };
 
     return successResponse(res, { payments, summary });
-  } catch (e) { return errorResponse(res, 'Failed to generate report', 500); }
+  } catch (e) { 
+    logger.error('Failed to generate payment collection report:', e);
+    return errorResponse(res, 'Failed to generate report', 500); 
+  }
 };
 
+/**
+ * PERFORMANCE FIX: Replaced N+1 query pattern (1 query per salesperson × 3 aggregations)
+ * with batched aggregation queries. For 100 salespersons, this reduces
+ * 300 DB queries down to 3.
+ */
 const salespersonPerformanceReport = async (req, res) => {
   try {
     const { startDate, endDate, salespersonId } = req.query;
@@ -132,38 +152,71 @@ const salespersonPerformanceReport = async (req, res) => {
       select: { id: true, name: true, employeeId: true, region: true, targetAmount: true },
     });
 
-    const report = await Promise.all(salespersons.map(async (sp) => {
-      const orderWhere = { salespersonId: sp.id, deletedAt: null, status: { not: 'Cancelled' } };
-      const expWhere = { salespersonId: sp.id, deletedAt: null, status: 'Approved' };
-      const payWhere = { salespersonId: sp.id, deletedAt: null, status: 'Verified' };
-      if (dateFilter) { orderWhere.createdAt = dateFilter; expWhere.expenseDate = dateFilter; payWhere.paymentDate = dateFilter; }
+    if (!salespersons.length) return successResponse(res, { report: [] });
 
-      const [orders, expenses, payments] = await Promise.all([
-        prisma.order.aggregate({ where: orderWhere, _sum: { grandTotal: true }, _count: true, _avg: { grandTotal: true } }),
-        prisma.expense.aggregate({ where: expWhere, _sum: { amount: true } }),
-        prisma.payment.aggregate({ where: payWhere, _sum: { amount: true } }),
-      ]);
+    const spIds = salespersons.map(s => s.id);
 
-      const revenue = parseFloat(orders._sum.grandTotal || 0);
-      const expenseAmount = parseFloat(expenses._sum.amount || 0);
-      const collected = parseFloat(payments._sum.amount || 0);
+    // Batched aggregation queries instead of N+1
+    const orderWhere = { salespersonId: { in: spIds }, deletedAt: null, status: { not: 'Cancelled' } };
+    const expWhere = { salespersonId: { in: spIds }, deletedAt: null, status: 'Approved' };
+    const payWhere = { salespersonId: { in: spIds }, deletedAt: null, status: 'Verified' };
+    if (dateFilter) { orderWhere.createdAt = dateFilter; expWhere.expenseDate = dateFilter; payWhere.paymentDate = dateFilter; }
+
+    const [orderGroups, expenseGroups, paymentGroups] = await Promise.all([
+      prisma.order.groupBy({
+        by: ['salespersonId'],
+        where: orderWhere,
+        _sum: { grandTotal: true },
+        _count: true,
+        _avg: { grandTotal: true },
+      }),
+      prisma.expense.groupBy({
+        by: ['salespersonId'],
+        where: expWhere,
+        _sum: { amount: true },
+      }),
+      prisma.payment.groupBy({
+        by: ['salespersonId'],
+        where: payWhere,
+        _sum: { amount: true },
+      }),
+    ]);
+
+    // Build lookup maps
+    const orderMap = new Map(orderGroups.map(g => [g.salespersonId, g]));
+    const expenseMap = new Map(expenseGroups.map(g => [g.salespersonId, g]));
+    const paymentMap = new Map(paymentGroups.map(g => [g.salespersonId, g]));
+
+    const report = salespersons.map(sp => {
+      const orders = orderMap.get(sp.id);
+      const expenses = expenseMap.get(sp.id);
+      const payments = paymentMap.get(sp.id);
+
+      const revenue = toMoney(orders?._sum?.grandTotal);
+      const expenseAmount = toMoney(expenses?._sum?.amount);
+      const collected = toMoney(payments?._sum?.amount);
+      const target = sp.targetAmount ? toMoney(sp.targetAmount) : null;
 
       return {
         salesperson: sp.name, employeeId: sp.employeeId, region: sp.region,
-        totalOrders: orders._count, totalRevenue: revenue,
-        avgOrderValue: parseFloat(orders._avg.grandTotal || 0),
+        totalOrders: orders?._count || 0,
+        totalRevenue: revenue,
+        avgOrderValue: toMoney(orders?._avg?.grandTotal),
         totalExpenses: expenseAmount,
         expenseToRevenueRatio: revenue > 0 ? ((expenseAmount / revenue) * 100).toFixed(2) : '0.00',
         totalCollected: collected,
         collectionEfficiency: revenue > 0 ? ((collected / revenue) * 100).toFixed(2) : '0.00',
-        targetAmount: sp.targetAmount ? parseFloat(sp.targetAmount) : null,
-        targetAchievement: sp.targetAmount && revenue > 0 ? ((revenue / parseFloat(sp.targetAmount)) * 100).toFixed(2) : null,
+        targetAmount: target,
+        targetAchievement: target && revenue > 0 ? ((revenue / target) * 100).toFixed(2) : null,
       };
-    }));
+    });
 
     report.sort((a, b) => b.totalRevenue - a.totalRevenue);
     return successResponse(res, { report });
-  } catch (e) { return errorResponse(res, 'Failed to generate report', 500); }
+  } catch (e) { 
+    logger.error('Failed to generate salesperson performance report:', e);
+    return errorResponse(res, 'Failed to generate report', 500); 
+  }
 };
 
 const inventoryValuationReport = async (req, res) => {
@@ -178,30 +231,31 @@ const inventoryValuationReport = async (req, res) => {
     const report = items.map(item => ({
       id: item.id, sku: item.sku, name: item.name, category: item.category || 'Uncategorized',
       unit: item.unit, stockQuantity: item.stockQuantity,
-      costPrice: item.costPrice ? parseFloat(item.costPrice) : null,
-      sellingPrice: parseFloat(item.sellingPrice),
-      totalValueAtCost: item.costPrice ? item.stockQuantity * parseFloat(item.costPrice) : null,
-      totalValueAtSelling: item.stockQuantity * parseFloat(item.sellingPrice),
+      costPrice: toMoney(item.costPrice),
+      sellingPrice: toMoney(item.sellingPrice),
+      totalValueAtCost: item.costPrice ? toMoney(item.stockQuantity * toMoney(item.costPrice)) : null,
+      totalValueAtSelling: toMoney(item.stockQuantity * toMoney(item.sellingPrice)),
       isLowStock: item.stockQuantity <= item.lowStockThreshold,
       status: item.status,
     }));
 
     const summary = {
       totalItems: report.length,
-      totalValueAtSelling: report.reduce((s, i) => s + i.totalValueAtSelling, 0),
+      totalValueAtSelling: sumMoney(report, i => i.totalValueAtSelling),
       lowStockItems: report.filter(i => i.isLowStock).length,
       outOfStock: report.filter(i => i.stockQuantity === 0).length,
     };
 
     return successResponse(res, { report, summary });
-  } catch (e) { return errorResponse(res, 'Failed to generate report', 500); }
+  } catch (e) { 
+    logger.error('Failed to generate inventory valuation report:', e);
+    return errorResponse(res, 'Failed to generate report', 500); 
+  }
 };
 
 const exportOrderPaymentReport = async (req, res) => {
   try {
-    const { format = 'excel', ...filters } = req.query;
-    const fakeRes = { json: (data) => data };
-    // Get report data
+    const { format = 'excel' } = req.query;
     const where = { deletedAt: null, status: { not: 'Cancelled' } };
     const orders = await prisma.order.findMany({
       where,
@@ -211,8 +265,9 @@ const exportOrderPaymentReport = async (req, res) => {
     if (format === 'csv') {
       const rows = [['Order Number', 'Date', 'Party', 'Salesperson', 'Order Amount', 'Payment Received', 'Balance Due']];
       orders.forEach(o => {
-        const paid = o.payments.reduce((s, p) => s + parseFloat(p.amount), 0);
-        rows.push([o.orderNumber, o.createdAt.toISOString().split('T')[0], o.party.name, o.salesperson.name, o.grandTotal, paid.toFixed(2), (parseFloat(o.grandTotal) - paid).toFixed(2)]);
+        const paid = sumMoney(o.payments, p => p.amount);
+        const orderAmt = toMoney(o.grandTotal);
+        rows.push([o.orderNumber, o.createdAt.toISOString().split('T')[0], o.party.name, o.salesperson.name, orderAmt, paid.toFixed(2), toMoney(orderAmt - paid).toFixed(2)]);
       });
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', 'attachment; filename=order-payment-report.csv');
@@ -225,14 +280,18 @@ const exportOrderPaymentReport = async (req, res) => {
     sheet.addRow(['Order Number', 'Date', 'Party', 'Salesperson', 'Order Amount', 'Payment Received', 'Balance Due']);
     sheet.getRow(1).font = { bold: true };
     orders.forEach(o => {
-      const paid = o.payments.reduce((s, p) => s + parseFloat(p.amount), 0);
-      sheet.addRow([o.orderNumber, o.createdAt.toISOString().split('T')[0], o.party.name, o.salesperson.name, parseFloat(o.grandTotal), paid, parseFloat(o.grandTotal) - paid]);
+      const paid = sumMoney(o.payments, p => p.amount);
+      const orderAmt = toMoney(o.grandTotal);
+      sheet.addRow([o.orderNumber, o.createdAt.toISOString().split('T')[0], o.party.name, o.salesperson.name, orderAmt, paid, toMoney(orderAmt - paid)]);
     });
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename=order-payment-report.xlsx');
     await workbook.xlsx.write(res);
     res.end();
-  } catch (e) { return errorResponse(res, 'Export failed', 500); }
+  } catch (e) { 
+    logger.error('Export order payment report failed:', e);
+    return errorResponse(res, 'Export failed', 500); 
+  }
 };
 
 const exportPaymentCollectionReport = async (req, res) => {
@@ -245,34 +304,52 @@ const exportPaymentCollectionReport = async (req, res) => {
     const sheet = workbook.addWorksheet('Payment Collection');
     sheet.addRow(['Receipt No', 'Date', 'Party', 'Salesperson', 'Amount', 'Mode', 'Status']);
     sheet.getRow(1).font = { bold: true };
-    payments.forEach(p => sheet.addRow([p.receiptNumber, p.paymentDate.toISOString().split('T')[0], p.party.name, p.salesperson.name, parseFloat(p.amount), p.paymentMode, p.status]));
+    payments.forEach(p => sheet.addRow([p.receiptNumber, p.paymentDate.toISOString().split('T')[0], p.party.name, p.salesperson.name, toMoney(p.amount), p.paymentMode, p.status]));
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename=payment-collection-report.xlsx');
     await workbook.xlsx.write(res);
     res.end();
-  } catch (e) { return errorResponse(res, 'Export failed', 500); }
+  } catch (e) { 
+    logger.error('Export payment collection report failed:', e);
+    return errorResponse(res, 'Export failed', 500); 
+  }
 };
 
 const exportSalespersonReport = async (req, res) => {
   try {
     const salespersons = await prisma.salesperson.findMany({ where: { deletedAt: null }, select: { id: true, name: true, employeeId: true, region: true } });
+    
+    const spIds = salespersons.map(s => s.id);
+    const [orderGroups, expenseGroups, paymentGroups] = await Promise.all([
+      prisma.order.groupBy({ by: ['salespersonId'], where: { salespersonId: { in: spIds }, deletedAt: null }, _sum: { grandTotal: true }, _count: true, _avg: { grandTotal: true } }),
+      prisma.expense.groupBy({ by: ['salespersonId'], where: { salespersonId: { in: spIds }, status: 'Approved', deletedAt: null }, _sum: { amount: true } }),
+      prisma.payment.groupBy({ by: ['salespersonId'], where: { salespersonId: { in: spIds }, status: 'Verified', deletedAt: null }, _sum: { amount: true } }),
+    ]);
+
+    const orderMap = new Map(orderGroups.map(g => [g.salespersonId, g]));
+    const expenseMap = new Map(expenseGroups.map(g => [g.salespersonId, g]));
+    const paymentMap = new Map(paymentGroups.map(g => [g.salespersonId, g]));
+
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Salesperson Performance');
     sheet.addRow(['Name', 'Employee ID', 'Region', 'Total Orders', 'Total Revenue', 'Avg Order Value', 'Total Expenses', 'Total Collected']);
     sheet.getRow(1).font = { bold: true };
+    
     for (const sp of salespersons) {
-      const [orders, expenses, payments] = await Promise.all([
-        prisma.order.aggregate({ where: { salespersonId: sp.id, deletedAt: null }, _sum: { grandTotal: true }, _count: true, _avg: { grandTotal: true } }),
-        prisma.expense.aggregate({ where: { salespersonId: sp.id, status: 'Approved', deletedAt: null }, _sum: { amount: true } }),
-        prisma.payment.aggregate({ where: { salespersonId: sp.id, status: 'Verified', deletedAt: null }, _sum: { amount: true } }),
-      ]);
-      sheet.addRow([sp.name, sp.employeeId, sp.region || '', orders._count, parseFloat(orders._sum.grandTotal || 0), parseFloat(orders._avg.grandTotal || 0), parseFloat(expenses._sum.amount || 0), parseFloat(payments._sum.amount || 0)]);
+      const orders = orderMap.get(sp.id);
+      const expenses = expenseMap.get(sp.id);
+      const payments = paymentMap.get(sp.id);
+      sheet.addRow([sp.name, sp.employeeId, sp.region || '', orders?._count || 0, toMoney(orders?._sum?.grandTotal), toMoney(orders?._avg?.grandTotal), toMoney(expenses?._sum?.amount), toMoney(payments?._sum?.amount)]);
     }
+    
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename=salesperson-report.xlsx');
     await workbook.xlsx.write(res);
     res.end();
-  } catch (e) { return errorResponse(res, 'Export failed', 500); }
+  } catch (e) { 
+    logger.error('Export salesperson report failed:', e);
+    return errorResponse(res, 'Export failed', 500); 
+  }
 };
 
 module.exports = { orderPaymentReport, expenseBudgetReport, paymentCollectionReport, salespersonPerformanceReport, inventoryValuationReport, exportOrderPaymentReport, exportPaymentCollectionReport, exportSalespersonReport };

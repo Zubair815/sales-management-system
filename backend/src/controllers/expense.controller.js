@@ -1,6 +1,8 @@
 const prisma = require('../config/database');
 const { successResponse, errorResponse, paginatedResponse } = require('../utils/response');
 const { createAuditLog } = require('../utils/audit');
+const { toMoney } = require('../utils/money');
+const logger = require('../utils/logger');
 
 // Expense Types
 const getExpenseTypes = async (req, res) => {
@@ -110,8 +112,9 @@ const getExpenses = async (req, res) => {
     ]);
     return paginatedResponse(res, expenses, total, page, limit);
   } catch (e) { 
-    console.error('EXPENSE FETCH ERROR:', e);
+    logger.error('Failed to fetch expenses:', e);
     return errorResponse(res, 'Failed to fetch expenses', 500); 
+  }
   }
 };
 
@@ -151,10 +154,10 @@ const getAdminExpenseReports = async (req, res) => {
         const pendingCount = expenses.filter(e => e.status === 'Pending').length;
 
         // Calculate financial totals (converting Decimal to Number for safety)
-        const totalAmount = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+        const totalAmount = expenses.reduce((sum, e) => sum + toMoney(e.amount), 0);
         const pendingAmount = expenses
           .filter(e => e.status === 'Pending')
-          .reduce((sum, e) => sum + Number(e.amount), 0);
+          .reduce((sum, e) => sum + toMoney(e.amount), 0);
 
         return {
           salespersonId: sp.id,
@@ -174,7 +177,7 @@ const getAdminExpenseReports = async (req, res) => {
 
     return successResponse(res, reports, 'Admin expense reports generated');
   } catch (error) {
-    console.error('ADMIN REPORT ERROR:', error);
+    logger.error('Failed to fetch admin expense reports:', error);
     return errorResponse(res, 'Failed to fetch admin expense reports', 500);
   }
 };
@@ -208,7 +211,7 @@ const createExpense = async (req, res) => {
         salespersonId, 
         expenseTypeId, 
         description, 
-        amount: parseFloat(amount), 
+        amount: toMoney(amount), 
         expenseDate: new Date(expenseDate), 
         proofFilePath, 
         budgetCode,
@@ -221,7 +224,7 @@ const createExpense = async (req, res) => {
     await createAuditLog({ userId: req.user.id, userType: req.user.role, action: 'CREATE_EXPENSE', module: 'ExpenseManagement', recordId: expense.id, newValues: { amount }, ipAddress: req.ip });
     return successResponse(res, expense, 'Expense saved as draft', 201);
   } catch (e) { 
-    console.error('CREATE EXPENSE ERROR:', e);
+    logger.error('Failed to save expense:', e);
     return errorResponse(res, 'Failed to save expense', 500); 
   }
 };
@@ -257,7 +260,7 @@ const submitMonthlyExpenses = async (req, res) => {
     
     return successResponse(res, null, 'Monthly expenses submitted to Admin successfully');
   } catch (error) {
-    console.error('SUBMIT BATCH ERROR:', error);
+    logger.error('Failed to submit monthly expenses:', error);
     return errorResponse(res, 'Failed to submit monthly expenses', 500);
   }
 };
@@ -280,7 +283,7 @@ const updateExpense = async (req, res) => {
       where: { id: req.params.id }, 
       data: { 
         ...(description && { description }), 
-        ...(amount && { amount: parseFloat(amount) }), 
+        ...(amount && { amount: toMoney(amount) }), 
         ...(expenseDate && { expenseDate: new Date(expenseDate) }) 
       } 
     });
@@ -320,7 +323,7 @@ const approveExpense = async (req, res) => {
     await createAuditLog({ userId: req.user.id, userType: req.user.role, action: 'APPROVE_EXPENSE', module: 'ExpenseManagement', recordId: expense.id, ipAddress: req.ip });
     return successResponse(res, updated, 'Expense approved');
   } catch (e) { 
-    console.error('APPROVE ERROR:', e);
+    logger.error('Failed to approve expense:', e);
     return errorResponse(res, 'Failed to approve expense', 500); 
   }
 };
@@ -350,7 +353,7 @@ const rejectExpense = async (req, res) => {
 
     return successResponse(res, updated, 'Expense rejected');
   } catch (e) { 
-    console.error('REJECT ERROR:', e);
+    logger.error('Failed to reject expense:', e);
     return errorResponse(res, 'Failed to reject expense', 500); 
   }
 };
@@ -383,7 +386,7 @@ const bulkApproveExpenses = async (req, res) => {
 
     return successResponse(res, { count: updated.count }, `Successfully approved ${updated.count} expenses.`);
   } catch (error) {
-    console.error('BULK APPROVE ERROR:', error);
+    logger.error('Failed to bulk approve expenses:', error);
     return errorResponse(res, 'Failed to bulk approve expenses', 500);
   }
 };

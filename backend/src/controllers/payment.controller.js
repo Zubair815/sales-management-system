@@ -1,8 +1,15 @@
+const crypto = require('crypto');
 const prisma = require('../config/database');
 const { successResponse, errorResponse, paginatedResponse } = require('../utils/response');
 const { createAuditLog } = require('../utils/audit');
+const { toMoney } = require('../utils/money');
+const logger = require('../utils/logger');
 
-const generateReceiptNumber = () => `RCP-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+// Collision-safe receipt number using crypto
+const generateReceiptNumber = () => {
+  const uid = crypto.randomUUID().split('-')[0].toUpperCase();
+  return `RCP-${Date.now()}-${uid}`;
+};
 
 const getPayments = async (req, res) => {
   try {
@@ -48,7 +55,7 @@ const getPayments = async (req, res) => {
     ]);
     return paginatedResponse(res, payments, total, page, limit);
   } catch (e) { 
-    console.error('PAYMENT FETCH ERROR:', e);
+    logger.error('Failed to fetch payments:', e);
     return errorResponse(res, 'Failed to fetch payments', 500); 
   }
 };
@@ -78,7 +85,7 @@ const createPayment = async (req, res) => {
     const receiptNumber = generateReceiptNumber();
 
     const payment = await prisma.payment.create({
-      data: { receiptNumber, salespersonId, partyId, orderId: orderId || null, amount: parseFloat(amount), paymentMode, transactionId, paymentDate: new Date(paymentDate), purpose, proofFilePath },
+      data: { receiptNumber, salespersonId, partyId, orderId: orderId || null, amount: toMoney(amount), paymentMode, transactionId, paymentDate: new Date(paymentDate), purpose, proofFilePath },
       include: { party: { select: { name: true } }, order: { select: { orderNumber: true } } },
     });
 

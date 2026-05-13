@@ -37,7 +37,8 @@ function numberToWords(num) {
 }
 
 function amountToWords(amount) {
-  const num = parseFloat(amount);
+  const { toMoney } = require('./money');
+  const num = toMoney(amount);
   const intPart = Math.floor(num);
   const decPart = Math.round((num - intPart) * 100);
 

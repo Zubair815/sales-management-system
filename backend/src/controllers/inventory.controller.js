@@ -1,6 +1,7 @@
 const prisma = require('../config/database');
 const { successResponse, errorResponse, paginatedResponse } = require('../utils/response');
 const { createAuditLog } = require('../utils/audit');
+const { toMoney } = require('../utils/money');
 
 const getItems = async (req, res) => {
   try {
@@ -44,7 +45,7 @@ const createItem = async (req, res) => {
     if (existing) return errorResponse(res, 'SKU already exists', 400);
 
     const item = await prisma.inventoryItem.create({
-      data: { sku, name, description, category, unit: unit || 'Piece', costPrice: costPrice ? parseFloat(costPrice) : null, sellingPrice: parseFloat(sellingPrice), stockQuantity: parseInt(stockQuantity) || 0, lowStockThreshold: parseInt(lowStockThreshold) || 10 },
+      data: { sku, name, description, category, unit: unit || 'Piece', costPrice: costPrice ? toMoney(costPrice) : null, sellingPrice: toMoney(sellingPrice), stockQuantity: parseInt(stockQuantity) || 0, lowStockThreshold: parseInt(lowStockThreshold) || 10 },
     });
 
     await createAuditLog({ userId: req.user.id, userType: req.user.role, action: 'CREATE_INVENTORY_ITEM', module: 'InventoryManagement', recordId: item.id, newValues: { sku, name }, ipAddress: req.ip });
@@ -61,7 +62,7 @@ const updateItem = async (req, res) => {
     const { name, description, category, unit, costPrice, sellingPrice, lowStockThreshold, status } = req.body;
     const item = await prisma.inventoryItem.update({
       where: { id: req.params.id },
-      data: { ...(name && { name }), ...(description !== undefined && { description }), ...(category !== undefined && { category }), ...(unit && { unit }), ...(costPrice !== undefined && { costPrice: parseFloat(costPrice) }), ...(sellingPrice && { sellingPrice: parseFloat(sellingPrice) }), ...(lowStockThreshold && { lowStockThreshold: parseInt(lowStockThreshold) }), ...(status && { status }) },
+      data: { ...(name && { name }), ...(description !== undefined && { description }), ...(category !== undefined && { category }), ...(unit && { unit }), ...(costPrice !== undefined && { costPrice: toMoney(costPrice) }), ...(sellingPrice && { sellingPrice: toMoney(sellingPrice) }), ...(lowStockThreshold && { lowStockThreshold: parseInt(lowStockThreshold) }), ...(status && { status }) },
     });
     return successResponse(res, item, 'Item updated');
   } catch (error) {

@@ -1,8 +1,18 @@
 const { verifyAccessToken } = require('../utils/jwt');
 const { errorResponse } = require('../utils/response');
 const prisma = require('../config/database');
+const { getCache, setCache } = require('../utils/cache');
 
-// Authenticate JWT token — reads from HttpOnly cookie (primary) or Authorization header (fallback)
+/**
+ * Authenticate JWT token — reads from HttpOnly cookie (primary) or Authorization header (fallback).
+ * 
+ * PERFORMANCE FIX: Authenticated user data is cached in-memory for 2 minutes.
+ * This prevents a full DB query (with modulePermissions JOIN for Admins) on every
+ * single API request. The cache is keyed by user ID + role, so permission changes
+ * take effect within 2 minutes or on next login.
+ * 
+ * SECURITY FIX: SuperAdmin now checks for `status: 'Active'` (was previously missing).
+ */
 const authenticate = async (req, res, next) => {
   try {
     const token = req.cookies?.accessToken ||
@@ -14,25 +24,33 @@ const authenticate = async (req, res, next) => {
 
     const decoded = verifyAccessToken(token);
 
-    // Verify user still exists and is active
-    let user = null;
-    if (decoded.role === 'SuperAdmin') {
-      user = await prisma.superAdmin.findFirst({
-        where: { id: decoded.id, deletedAt: null },
-      });
-    } else if (decoded.role === 'Admin') {
-      user = await prisma.admin.findFirst({
-        where: { id: decoded.id, deletedAt: null, status: 'Active' },
-        include: { modulePermissions: true },
-      });
-    } else if (decoded.role === 'Salesperson') {
-      user = await prisma.salesperson.findFirst({
-        where: { id: decoded.id, deletedAt: null, status: 'Active' },
-      });
-    }
+    // Check cache first to avoid DB hit on every request
+    const cacheKey = `auth_user_${decoded.role}_${decoded.id}`;
+    let user = getCache(cacheKey);
 
     if (!user) {
-      return errorResponse(res, 'User not found or inactive', 401);
+      // Cache miss — fetch from DB
+      if (decoded.role === 'SuperAdmin') {
+        user = await prisma.superAdmin.findFirst({
+          where: { id: decoded.id, deletedAt: null, status: 'Active' }, // FIX: Added status check
+        });
+      } else if (decoded.role === 'Admin') {
+        user = await prisma.admin.findFirst({
+          where: { id: decoded.id, deletedAt: null, status: 'Active' },
+          include: { modulePermissions: true },
+        });
+      } else if (decoded.role === 'Salesperson') {
+        user = await prisma.salesperson.findFirst({
+          where: { id: decoded.id, deletedAt: null, status: 'Active' },
+        });
+      }
+
+      if (!user) {
+        return errorResponse(res, 'User not found or inactive', 401);
+      }
+
+      // Cache for 2 minutes — balances performance vs permission freshness
+      setCache(cacheKey, user, 120);
     }
 
     req.user = { ...user, role: decoded.role };
