@@ -115,7 +115,6 @@ const getExpenses = async (req, res) => {
     logger.error('Failed to fetch expenses:', e);
     return errorResponse(res, 'Failed to fetch expenses', 500); 
   }
-  }
 };
 
 // --- NEW FUNCTION: Group Expenses by Salesperson (Admin Dashboard View) ---
